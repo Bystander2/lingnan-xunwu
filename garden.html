@@ -92,6 +92,13 @@
   #end h2 { font: 88px var(--xing); letter-spacing: .3em; margin: 0 0 16px; padding-left: .3em; font-weight: 400; }
   #end p { font: 22px var(--kai); letter-spacing: .3em; margin: 6px; }
 </style>
+<script>
+/* Umami：单独打开先统计；作为第二幕 iframe 嵌入时由 garden-map.html 统计，避免重复计数 */
+if (!new URLSearchParams(location.search).has('embed')) {
+  const s = document.createElement('script'); s.defer = true; s.src = 'https://cloud.umami.is/script.js';
+  s.dataset.websiteId = 'c070122e-4a86-4827-aa85-86f1ccd9951c'; document.head.appendChild(s);
+}
+</script>
 </head>
 <body>
 <div id="loading">园 门 开 启 中</div>

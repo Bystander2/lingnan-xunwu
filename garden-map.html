@@ -240,6 +240,7 @@ body.world-on .w-cap{top:86px}
 }
 @keyframes stampIn{from{transform:rotate(-8deg) scale(2.4); opacity:0}}
 </style>
+<script defer src="https://cloud.umami.is/script.js" data-website-id="c070122e-4a86-4827-aa85-86f1ccd9951c"></script>
 </head>
 <body>
 <header>
@@ -375,6 +376,16 @@ body.world-on .w-cap{top:86px}
 
 <script src="garden/words.js"></script>
 <script>
+/* Umami 统计：game-start / word-found / enter-world / world-timeup / win / heartbeat。
+   script.js 未载入（网慢）时先排队，载入后按顺序补发；30 秒都载唔到（被拦截）就放弃。
+   心跳每 30 秒一次（只喺页面睇得见时），令停留时长计得准，玩 30 分钟后停 */
+const track = (() => {
+  const q = [], send = a => { try { umami.track(...a); } catch (e) {} };
+  const flush = () => { while (q.length) send(q.shift()); };
+  let tries = 0; const wait = setInterval(() => { if (window.umami) flush(); if (window.umami || ++tries >= 60) { clearInterval(wait); if (!window.umami) q.length = 0; } }, 500);
+  return (name, data) => { const a = data ? [name, data] : [name]; if (window.umami) { flush(); send(a); } else if (tries < 60 && q.length < 50) q.push(a); };
+})();
+(() => { let n = 0; const hb = setInterval(() => { if (document.visibilityState === 'visible') track('heartbeat'); if (++n >= 60) clearInterval(hb); }, 30000); })();
 /* 第二幕：garden.html 以 iframe 嵌入（?embed&need=..&torn=..&sec=..），用 postMessage 回报 gain / timeup / done */
 const World = (() => {
   let frame = null, opts = null;
@@ -579,6 +590,7 @@ function newRound(){
   document.querySelectorAll('#map defs .tear-clip').forEach(n => n.remove());
   renderList(); updateStatus();
   t0 = Date.now(); clearInterval(timer);
+  worldTries = 0; track('game-start', { round: ++roundNo });
   timer = setInterval(updateStatus, 500);
   $('#win').hidden = true;
 }
@@ -685,6 +697,7 @@ function scraps(pts){
 
 function collect(w, x, y, bw, bh){
   found.add(w); tearing.delete(w);
+  track('word-found', { word: w, act: inWorld ? 2 : 1, count: found.size });
   const li = document.querySelector(`#list li[data-w="${w}"]`);
   if (li) li.classList.add('done');
   playPen();
@@ -710,6 +723,7 @@ function collect(w, x, y, bw, bh){
 let won = false;
 function winGame(){
   if (won) return; won = true;
+  track('win', { seconds: Math.floor((Date.now() - t0) / 1000), hints, act: inWorld ? 2 : 1 });
   clearInterval(timer); updateStatus();
   if (inWorld){
     World.exit(); inWorld = false; $('#world').hidden = true;
@@ -774,8 +788,10 @@ function stuckTear(hit, ev){
 }
 
 const fmt = s => String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+let worldTries = 0, roundNo = 0;
 function enterWorld(){
   inWorld = true; busy = false;
+  track('enter-world', { attempt: ++worldTries, found: found.size });
   $('#board').style.display = 'none'; $('.left').classList.add('in-world'); document.body.classList.add('world-on');
   $('#world').hidden = false;
   const remaining = round.filter(w => !found.has(w) && !tearing.has(w));
@@ -788,6 +804,7 @@ function enterWorld(){
     onVoice: on => { voiceOn = on; $('#muteBtn').textContent = '读音：' + (voiceOn ? '开' : '关'); },
     onTimeUp: left => {
       left = left || round.filter(w => !found.has(w));
+      track('world-timeup', { left: left.length });
       playThud();
       $('#timeUpText').innerHTML = `仲有 ${left.length} 样未搵到：${left.join('、')}。<br>你仲困喺图纸入面……`;
       $('#timeUp').hidden = false;
