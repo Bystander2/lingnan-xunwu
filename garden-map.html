@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>岭南寻物 · 粤语园林图纸</title>
+<link rel="stylesheet" href="vendor/fonts/wenkai.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@500;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#2e2118; --paper:#efe2c2; --paper2:#e4cf9f; --red:#b33a2b;
+  --teal:#2f6f6a; --mustard:#d29b2f; --desk:#3b2a1e;
+  /* 马善政毛笔楷书冇收粤语字（嘢、咗、冇、嚟…），缺嘅字由内嵌嘅霞鹜文楷粗体补，粗细先一致 */
+  --hand:"Ma Shan Zheng","WenKai Local","STKaiti","KaiTi","Kaiti SC",cursive;
+  --brush:var(--hand);
+  --print:"Noto Serif SC","Songti SC","SimSun",serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  font-family:var(--print); color:var(--ink);
+  background:
+    repeating-linear-gradient(93deg,rgba(0,0,0,.06) 0 2px,transparent 2px 9px),
+    repeating-linear-gradient(88deg,rgba(255,255,255,.03) 0 1px,transparent 1px 23px),
+    radial-gradient(ellipse at 50% 30%,#5a3f2b,#2a1c13 80%);
+  background-color:var(--desk);
+  min-height:100vh; overflow-x:hidden;
+}
+header{
+  text-align:center; padding:10px 12px 2px; color:#f3e3bd;
+  text-shadow:0 2px 0 #1a100a;
+}
+header h1{
+  margin:0; font-family:"ZCOOL XiaoWei",var(--print); font-size:clamp(24px,3.2vw,38px);
+  letter-spacing:.3em;
+}
+header p{margin:4px 0 0; font-size:13px; opacity:.75; letter-spacing:.15em}
+
+.stage{
+  display:flex; justify-content:center; gap:34px;
+  margin:0 auto; padding:10px 22px 30px; align-items:flex-start;
+}
+.left{position:relative; flex:none; width:min(calc(100vw - 390px), calc((100vh - 118px) * 1.6)); min-width:300px; transition:width .4s}
+.note{flex:none; width:310px}
+@media (max-width:820px){ .stage{flex-direction:column; align-items:center} .left{width:100%} .note{width:min(100%,340px)} }
+
+/* ---------- 图纸 ---------- */
+.board{
+  position:relative; padding:12px; background:#f4ead2;
+  box-shadow:0 18px 40px rgba(0,0,0,.55), 0 2px 0 rgba(255,255,255,.15) inset;
+  transform:rotate(-.6deg);
+}
+.board::before,.board::after{
+  content:""; position:absolute; top:-8px; width:22px; height:22px; border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#ff8d7a,#b33a2b 55%,#5e1a12);
+  box-shadow:0 4px 6px rgba(0,0,0,.5); z-index:3;
+}
+.board::before{left:-6px} .board::after{right:-6px}
+.board.shake{animation:shake .35s}
+@keyframes shake{
+  20%{transform:rotate(-.6deg) translateX(-7px)} 40%{transform:rotate(-.6deg) translateX(6px)}
+  60%{transform:rotate(-.6deg) translateX(-4px)} 80%{transform:rotate(-.6deg) translateX(3px)}
+}
+#map{display:block; width:100%; height:auto; cursor:crosshair; user-select:none; -webkit-user-select:none; touch-action:manipulation}
+.hit{fill:transparent; pointer-events:all}
+.neon-glow{animation:flicker 4s infinite}
+@keyframes flicker{0%,18%,22%,62%,64%,100%{opacity:1} 20%,63%{opacity:.45}}
+.piece,.scrap{transform-box:fill-box; transform-origin:center}
+
+/* ---------- 纸条 ---------- */
+.note{
+  position:relative; padding:46px 22px 22px 46px;
+  background:
+    linear-gradient(90deg,transparent 34px,rgba(200,70,60,.55) 34px 36px,transparent 36px),
+    repeating-linear-gradient(180deg,transparent 0 33px,rgba(70,110,150,.28) 33px 34px),
+    linear-gradient(#f8f0dc,#efe3c4);
+  box-shadow:0 14px 28px rgba(0,0,0,.5);
+  transform:rotate(1.4deg);
+  font-family:var(--hand);
+  clip-path:polygon(0 0,100% 0,100% 97%,96% 99%,91% 97.5%,85% 99.5%,78% 98%,70% 100%,62% 98%,55% 99.5%,46% 98%,38% 100%,30% 98%,21% 99.5%,12% 98%,5% 100%,0 98%);
+}
+.tape{
+  position:absolute; top:-6px; left:50%; width:120px; height:30px; transform:translateX(-50%) rotate(-3deg);
+  background:repeating-linear-gradient(45deg,rgba(214,155,47,.75) 0 8px,rgba(232,190,100,.75) 8px 16px);
+  box-shadow:0 1px 2px rgba(0,0,0,.2);
+}
+.note h2{margin:0 0 6px; font-weight:400; font-size:28px; color:#7a2a20; line-height:34px}
+.note .sub{font-size:16px; color:#6b5a48; margin:-4px 0 6px; line-height:28px}
+#list{list-style:none; margin:0; padding:0}
+#list li{
+  position:relative; display:flex; align-items:baseline; gap:8px;
+  height:34px; line-height:34px; font-size:27px; color:#1f2a44;
+}
+#list li .n{font-size:16px; color:#8a7a66; width:22px}
+#list li .w{position:relative; display:inline-block; white-space:nowrap; flex:none}
+#list li .w svg{position:absolute; left:-6px; right:-6px; top:4px; width:calc(100% + 12px); height:26px; overflow:visible; pointer-events:none}
+#list li .w path{fill:none; stroke:#c0362a; stroke-width:3.2; stroke-linecap:round; stroke-dasharray:1; stroke-dashoffset:1; transition:stroke-dashoffset .45s ease-out}
+#list li.done .w path{stroke-dashoffset:0}
+#list li.done .w{color:#6d6a66}
+#list li .jp{font-family:var(--print); font-size:11px; overflow:hidden; text-overflow:ellipsis; min-width:0; color:#9a3b2c; opacity:0; transition:opacity .4s .3s; white-space:nowrap}
+#list li.done .jp{opacity:1}
+#list li .say{
+  margin-left:auto; border:0; background:none; cursor:pointer; font-size:16px; opacity:.55; padding:0 2px;
+}
+#list li .say:hover{opacity:1}
+.status{margin-top:10px; font-size:22px; line-height:34px; color:#3a2a1e}
+.status b{color:#b33a2b; font-weight:400; font-size:28px}
+.btns{display:flex; gap:8px; flex-wrap:wrap; margin-top:6px}
+.btns button,.overlay button{
+  font-family:var(--hand); font-size:19px; cursor:pointer; color:#3a2a1e;
+  background:#f3dfae; border:2px solid #3a2a1e; border-radius:3px; padding:2px 12px;
+  box-shadow:2px 2px 0 #3a2a1e; transition:transform .08s;
+}
+.btns button:active,.overlay button:active{transform:translate(2px,2px); box-shadow:none}
+.clip{display:flex; flex-wrap:wrap; gap:4px; margin-top:14px; min-height:20px}
+.clip .thumb{width:54px; height:40px; background:#efe2c2; box-shadow:0 2px 3px rgba(0,0,0,.35); animation:drop .45s ease-out}
+.clip .thumb svg{width:100%; height:100%; display:block}
+@keyframes drop{from{transform:translateY(-30px) rotate(-20deg) scale(1.4); opacity:0}}
+.src{font-family:var(--print); font-size:11px; color:#7d6b55; margin:12px 0 0; line-height:1.5}
+.src a{color:inherit}
+
+/* ---------- 扯入图纸 ---------- */
+.board.strain{animation:strain .9s ease-in-out}
+@keyframes strain{
+  0%,100%{transform:rotate(-.6deg)} 15%{transform:rotate(-1.4deg) translate(-10px,3px) scale(1.01)}
+  30%{transform:rotate(.4deg) translate(9px,-4px) scale(1.02)} 50%{transform:rotate(-1.8deg) translate(-12px,4px) scale(1.03)}
+  70%{transform:rotate(.9deg) translate(10px,-2px) scale(1.02)} 85%{transform:rotate(-1deg) translate(-5px,2px)}
+}
+.board.suck{animation:suck 1.6s cubic-bezier(.6,0,.9,.4) forwards; transform-origin:var(--ox,50%) var(--oy,50%)}
+@keyframes suck{
+  0%{transform:rotate(-.6deg) scale(1); filter:none}
+  40%{transform:rotate(-3deg) scale(1.25); filter:sepia(.3)}
+  100%{transform:rotate(12deg) scale(9); filter:blur(6px) brightness(1.8); opacity:0}
+}
+#flash{position:fixed; inset:0; background:#fbf3dc; opacity:0; pointer-events:none; z-index:25; transition:opacity .5s}
+#flash.on{opacity:1}
+
+/* ---------- 第二幕（园林 iframe） ---------- */
+#world .w-frame{position:absolute; inset:0; width:100%; height:100%; border:0; display:block}
+body.world-on .note{display:none !important}   /* 第二幕用园入面嗰张纸条（含提示 / 计时 / 再嚟一铺 / 读音） */
+#world{position:relative; aspect-ratio:1600/1000; width:100%; background:#2a1c13; overflow:hidden;
+  box-shadow:0 18px 40px rgba(0,0,0,.55); border:12px solid #f4ead2; transform:rotate(-.6deg)}
+.w-ov{position:absolute; inset:0; width:100%; height:100%; z-index:1; pointer-events:none}
+.w-cap{position:absolute; left:5%; right:5%; top:68px; z-index:2; text-align:center; font-family:var(--hand); font-size:clamp(17px,2.1vh,24px); line-height:1.35; color:#fff6dc;
+  background:rgba(40,24,12,.78); padding:8px 14px; border-radius:4px; opacity:0; transform:translateY(-8px); transition:opacity .35s, transform .35s; pointer-events:none}
+.w-cap.show{opacity:1; transform:none}
+#world[hidden]{display:none}
+#world::after{content:""; position:absolute; inset:0; z-index:4; pointer-events:none; background:#f4ead2; opacity:0; transition:opacity .45s}
+#world.w-cross::after{opacity:1}
+/* 入咗图纸：成个画面都系图纸，纸条变成最上面一行 */
+body.world-on{overflow:hidden}
+body.world-on #world{position:fixed; inset:0; width:100vw; height:100vh; aspect-ratio:auto; border:0; transform:none; box-shadow:none; z-index:12}
+body.world-on .note{position:fixed; top:0; left:0; right:0; width:auto; z-index:13; transform:none; clip-path:none;
+  display:flex; flex-wrap:wrap; align-items:center; gap:4px 18px; padding:8px 16px; background:linear-gradient(#f8f0dc,#efe3c4); box-shadow:0 3px 10px rgba(0,0,0,.35)}
+body.world-on .note .tape, body.world-on .note .sub, body.world-on .note .clip, body.world-on .note .src{display:none}
+body.world-on .note h2{margin:0; font-size:20px; line-height:30px; white-space:nowrap}
+body.world-on #list{display:flex; flex-wrap:wrap; gap:2px 16px; flex:1 1 auto}
+body.world-on #list li{height:30px; line-height:30px; font-size:22px; gap:3px}
+body.world-on #list li .n, body.world-on #list li .jp{display:none}
+body.world-on #list li .say{margin-left:0; font-size:13px}
+body.world-on .note .status, body.world-on .note .btns{margin:0; white-space:nowrap}
+body.world-on .w-timer{top:auto; bottom:16px}
+body.world-on .w-help{top:auto; bottom:16px; left:16px}
+body.world-on .w-cap{top:86px}
+@media (max-width:820px){
+  body.world-on .note{padding:5px 10px; gap:2px 10px}
+  body.world-on .note h2{display:none}
+  body.world-on #list{gap:0 10px}
+  body.world-on #list li{font-size:16px; height:22px; line-height:22px}
+  body.world-on #list li .say{display:none}
+  body.world-on .note .status{font-size:14px}
+  body.world-on .note .btns button{font-size:12px; padding:1px 6px}
+  body.world-on .w-help{display:none}
+  body.world-on .w-timer{bottom:auto; top:auto; bottom:84px; font-size:20px}
+  body.world-on .w-cap{top:100px}
+}
+.w-canvas canvas{position:absolute; inset:0; width:100%!important; height:100%!important}
+.w-canvas::after{content:""; position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(ellipse at 50% 50%,transparent 70%,rgba(58,29,5,.32))}
+.w-timer{position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:2; white-space:nowrap;
+  font-family:"ZCOOL XiaoWei",var(--print); font-size:26px; color:#2e2118; background:#fbf3dc;
+  padding:2px 18px; border:3px solid #2e2118; box-shadow:3px 3px 0 #2e2118; letter-spacing:.1em}
+.w-timer::before{content:"离开倒数 "; font-size:15px; letter-spacing:0}
+.w-timer.hurry{color:#b33a2b; animation:pulse .5s infinite alternate}
+@keyframes pulse{to{transform:translateX(-50%) scale(1.08)}}
+.w-prompt{position:absolute; left:50%; top:24%; transform:translateX(-50%); z-index:2;
+  font-family:var(--hand); font-size:22px; color:#fbf3dc; background:rgba(46,33,24,.82); padding:2px 14px; border-radius:3px; white-space:nowrap}
+.w-dialog{position:absolute; left:4%; right:4%; bottom:4%; z-index:3; cursor:pointer;
+  background:linear-gradient(#fbf3dc,#efe2c2); border:3px solid #2e2118; box-shadow:5px 5px 0 #2e2118;
+  padding:12px 18px 14px; min-height:96px}
+.w-dialog[hidden]{display:none}
+.w-dialog .who{display:inline-block; font-family:var(--print); font-weight:900; font-size:15px; color:#fbf3dc; background:#b33a2b; padding:1px 10px; margin-bottom:6px}
+.w-dialog .who.me{background:#2f4a6a} .w-dialog .who.sys{background:#2f6f6a}
+.w-dialog .text{font-family:var(--hand); font-size:clamp(20px,2.4vw,28px); line-height:1.35; color:#2e2118}
+.w-dialog .more{position:absolute; right:14px; bottom:8px; font-size:13px; color:#7d6b55; animation:pulse2 1s infinite alternate}
+@keyframes pulse2{to{opacity:.3}}
+.w-help{position:absolute; left:12px; top:12px; z-index:2; font-size:12px; line-height:1.6; color:#2e2118; background:rgba(251,243,220,.85); padding:4px 10px; border:1.5px solid #2e2118}
+.w-pad{position:absolute; right:14px; bottom:14px; z-index:2; display:grid; grid-template-columns:repeat(3,44px); grid-template-rows:repeat(2,44px); gap:4px}
+.w-pad button,.w-act{font-size:20px; background:rgba(251,243,220,.9); border:2px solid #2e2118; border-radius:6px; color:#2e2118; touch-action:none; user-select:none; -webkit-user-select:none}
+.w-pad [data-k=arrowup]{grid-column:2} .w-pad [data-k=arrowleft]{grid-column:1; grid-row:2} .w-pad [data-k=arrowdown]{grid-column:2; grid-row:2} .w-pad [data-k=arrowright]{grid-column:3; grid-row:2}
+.w-act{position:absolute; left:14px; bottom:14px; z-index:2; width:auto; height:56px; padding:0 16px; font-family:var(--hand); font-size:22px}
+@media (hover:hover) and (pointer:fine){ .w-pad,.w-act{display:none} }
+.sys-card{border:3px solid #2f6f6a}
+.sys-card h3{color:#2f6f6a}
+.sys-tag{display:inline-block; font-size:13px; color:#fbf3dc; background:#2f6f6a; padding:1px 10px; margin-bottom:8px; letter-spacing:.2em}
+
+/* ---------- 提示条 ---------- */
+#toast{
+  position:fixed; left:50%; bottom:26px; transform:translate(-50%,calc(100% + 40px)) rotate(-1deg);
+  background:#fbf3dc; color:#2e2118; padding:10px 18px; max-width:min(560px,92vw);
+  font-family:var(--print); font-size:15px; line-height:1.5;
+  box-shadow:0 8px 18px rgba(0,0,0,.45); border-left:6px solid #b33a2b;
+  transition:transform .35s cubic-bezier(.2,1.4,.4,1); z-index:20; pointer-events:none;
+}
+#toast.show{transform:translate(-50%,0) rotate(-1deg)}
+#toast .big{font-family:var(--hand); font-size:26px; color:#b33a2b; margin-right:8px}
+#toast .jp{color:#2f6f6a; font-weight:500}
+
+/* ---------- 遮罩 ---------- */
+.overlay{
+  position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+  background:rgba(25,15,8,.62); z-index:30;
+}
+.overlay[hidden]{display:none}
+.card{
+  position:relative; width:min(460px,90vw); padding:30px 30px 26px; text-align:center;
+  background:linear-gradient(#f8efd6,#ecdcb5); box-shadow:0 20px 50px rgba(0,0,0,.6);
+  transform:rotate(-1deg); font-family:var(--print);
+}
+.card h3{font-family:"ZCOOL XiaoWei",var(--print); font-size:34px; margin:0 0 8px; letter-spacing:.2em; color:#7a2a20}
+.card p{font-size:15px; line-height:1.8; margin:6px 0 16px}
+.card .hand{font-family:var(--hand); font-size:21px}
+#list li .w, #toast .big{font-family:var(--brush)}
+.stamp{
+  display:inline-block; margin:6px 0 10px; padding:6px 18px; border:5px double #b33a2b; color:#b33a2b;
+  font-family:"ZCOOL XiaoWei",var(--print); font-size:46px; letter-spacing:.15em;
+  transform:rotate(-8deg); opacity:.88; animation:stampIn .4s cubic-bezier(.3,1.6,.5,1);
+}
+@keyframes stampIn{from{transform:rotate(-8deg) scale(2.4); opacity:0}}
+</style>
+</head>
+<body>
+<header>
+  <h1>岭南寻物</h1>
+  <p>粤语园林图纸 · 按纸条搵嘢，撕落嚟听粤语</p>
+</header>
+
+<main class="stage">
+  <div class="left">
+  <div class="board" id="board">
+  <svg id="map" viewBox="0 0 1600 1000" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="vignette" cx="50%" cy="50%" r="72%">
+        <stop offset="70%" stop-color="#000" stop-opacity="0"/>
+        <stop offset="100%" stop-color="#3a1d05" stop-opacity=".32"/>
+      </radialGradient>
+      <linearGradient id="fold" x1="0" x2="1">
+        <stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset=".48" stop-color="#000" stop-opacity=".1"/>
+        <stop offset=".5" stop-color="#fff" stop-opacity=".16"/><stop offset=".53" stop-color="#000" stop-opacity="0"/>
+      </linearGradient>
+      <filter id="fiber" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="fractalNoise" baseFrequency=".6" numOctaves="1" seed="11"/>
+        <feDisplacementMap in="SourceGraphic" scale="3"/>
+      </filter>
+      <filter id="lift" x="-20%" y="-20%" width="140%" height="150%">
+        <feDropShadow dx="4" dy="9" stdDeviation="5" flood-color="#1a0d05" flood-opacity=".55"/>
+      </filter>
+      <filter id="holeShadow" x="-10%" y="-10%" width="120%" height="120%">
+        <feGaussianBlur stdDeviation="4"/>
+      </filter>
+    </defs>
+
+    <!-- 整张图纸（撕纸时会被引用复制） -->
+    <g id="scene">
+      <rect width="1600" height="1000" fill="#efe2c2"/>
+      <image href="assets/garden-map.jpg" width="1600" height="1000" preserveAspectRatio="none"/>
+      <rect width="1600" height="1000" fill="url(#vignette)" pointer-events="none"/>
+      <rect x="500" width="80" height="1000" fill="url(#fold)" pointer-events="none"/>
+      <rect x="1040" width="80" height="1000" fill="url(#fold)" pointer-events="none"/>
+    </g>
+
+    <g id="holes"></g>
+    <g id="fx" pointer-events="none"></g>
+    <g id="pieces" pointer-events="none"></g>
+
+    <!-- 点击区：由 garden.html?shot=plan 按 3D 场景投影自动导出（data-big 撕唔郁 / data-w 词条 / data-d 干扰物，越后越上层） -->
+    <g id="hits">
+      <rect class="hit" data-big="镬耳大屋" x="446" y="0" width="691" height="389"/>
+      <rect class="hit" data-big="大榕树" x="612" y="125" width="988" height="623"/>
+      <rect class="hit" data-w="瓦檐口" x="503" y="197" width="578" height="177"/>
+      <rect class="hit" data-d="锦鲤" x="255" y="448" width="396" height="231"/>
+      <rect class="hit" data-d="满洲窗" x="585" y="216" width="49" height="89"/>
+      <rect class="hit" data-d="满洲窗" x="677" y="216" width="45" height="89"/>
+      <rect class="hit" data-d="满洲窗" x="865" y="217" width="44" height="89"/>
+      <rect class="hit" data-d="满洲窗" x="952" y="217" width="49" height="89"/>
+      <rect class="hit" data-d="灯笼" x="582" y="259" width="26" height="32"/>
+      <rect class="hit" data-d="灯笼" x="680" y="259" width="24" height="32"/>
+      <rect class="hit" data-d="灯笼" x="881" y="260" width="23" height="32"/>
+      <rect class="hit" data-d="灯笼" x="977" y="260" width="26" height="32"/>
+      <rect class="hit" data-d="簕杜鹃" x="906" y="903" width="663" height="97"/>
+      <rect class="hit" data-d="鸡蛋花" x="1064" y="330" width="134" height="126"/>
+      <rect class="hit" data-w="花阶砖" x="497" y="388" width="589" height="47"/>
+      <rect class="hit" data-w="琉璃瓦" x="499" y="239" width="586" height="21"/>
+      <rect class="hit" data-w="大葵扇" x="982" y="617" width="65" height="71"/>
+      <rect class="hit" data-w="一只屐" x="598" y="510" width="50" height="50"/>
+      <rect class="hit" data-w="饮早茶" x="804" y="698" width="104" height="64"/>
+      <rect class="hit" data-w="油纸遮" x="302" y="782" width="188" height="184"/>
+      <rect class="hit" data-w="担凳仔" x="893" y="674" width="58" height="58"/>
+      <rect class="hit" data-w="树仔头" x="656" y="347" width="53" height="64"/>
+      <rect class="hit" data-w="瓦公仔" x="569" y="22" width="450" height="50"/>
+      <rect class="hit" data-w="太师椅" x="579" y="284" width="66" height="50"/>
+      <rect class="hit" data-w="龙牙蕉" x="0" y="802" width="153" height="198"/>
+    </g>
+  </svg>
+  </div>
+  <div id="world" hidden></div>
+  </div>
+
+  <aside class="note" id="note">
+    <div class="tape"></div>
+    <h2>阿婆托你搵：</h2>
+    <div class="sub">喺图纸度搵到，撕落嚟！</div>
+    <ol id="list"></ol>
+    <div class="status">搵到 <b id="cnt">0</b> / <span id="tot">0</span>　⏱ <span id="time">00:00</span></div>
+    <div class="btns">
+      <button id="hintBtn">提示</button>
+      <button id="againBtn">再嚟一铺</button>
+      <button id="muteBtn" title="开关读音">读音：开</button>
+    </div>
+    <div class="clip" id="clip"></div>
+    <p class="src" id="src">正在向 DimSum 粤语语料库查词……</p>
+  </aside>
+</main>
+
+<div id="toast"></div>
+<div id="flash"></div>
+
+<div class="overlay" id="sysMsg" hidden>
+  <div class="card sys-card">
+    <div class="sys-tag">系统提示</div>
+    <h3>你入咗图纸</h3>
+    <p class="hand">张纸撕唔落，反而将你成个人扯咗入去！<br>张图变咗真——你而家就企喺园门口。</p>
+    <p id="sysText"></p>
+    <button id="sysGo">出发！</button>
+  </div>
+</div>
+
+<div class="overlay" id="timeUp" hidden>
+  <div class="card sys-card">
+    <div class="sys-tag">系统提示</div>
+    <h3>时间到！</h3>
+    <p class="hand" id="timeUpText"></p>
+    <button id="retryWorld">再试一次</button>
+  </div>
+</div>
+
+<div class="overlay" id="intro">
+  <div class="card">
+    <h3>岭南寻物</h3>
+    <p class="hand">阿婆畀咗你一张纸条，<br>话要喺呢座老园林度搵齐啲嘢。</p>
+    <p>喺园林图纸度搵出纸条写嘅嘢，<br>㩒一下就会「嘶——」咁撕落嚟，纸条上就会帮你划走。<br>撕啱咗仲会读埋粤语俾你听。<br>不过……有啲大件嘢，未必撕得郁。</p>
+    <button id="startBtn">开工！</button>
+  </div>
+</div>
+
+<div class="overlay" id="win" hidden>
+  <div class="card">
+    <div class="stamp">搞掂晒</div>
+    <p class="hand" id="winText"></p>
+    <button id="winAgain">再嚟一铺</button>
+  </div>
+</div>
+
+<script src="garden/words.js"></script>
+<script>
+/* 第二幕：garden.html 以 iframe 嵌入（?embed&need=..&torn=..&sec=..），用 postMessage 回报 gain / timeup / done */
+const World = (() => {
+  let frame = null, opts = null;
+  addEventListener('message', e => {
+    const d = e.data; if (!d || d.src !== 'garden' || !opts) return;
+    if (d.type === 'gain') opts.onGain(d.w);
+    else if (d.type === 'timeup') opts.onTimeUp(d.left);
+    else if (d.type === 'done') opts.onDone && opts.onDone();
+    else if (d.type === 'hint') opts.onHint && opts.onHint();
+    else if (d.type === 'again') opts.onAgain && opts.onAgain();
+    else if (d.type === 'voice') opts.onVoice && opts.onVoice(d.on);
+  });
+  return {
+    enter(o){
+      this.exit(); opts = o;
+      frame = document.createElement('iframe'); frame.className = 'w-frame'; frame.allow = 'autoplay; fullscreen';
+      frame.src = 'garden.html?embed&' + new URLSearchParams({ need: o.need.join(','), torn: o.torn.join(','), sec: o.seconds, voice: o.voice ? 1 : 0, t0: Math.floor((Date.now() - t0) / 1000) });
+      document.getElementById('world').appendChild(frame);
+      frame.addEventListener('load', () => frame.focus());
+    },
+    start(){},
+    exit(){ if (frame){ frame.remove(); frame = null; } opts = null; },
+  };
+})();
+</script>
+<script>
+/* 词条：garden/words.js（DimSum AI 粤语语料库快照，现代粤语词典 · 带真人发音）；启动时会再实时查一次 */
+const API = 'https://backend.aidimsum.com/v2/corpus_item';
+const WORDS = Object.assign({}, window.GARDEN_WORDS);
+const DISTRACT = {
+  '锦鲤':'锦鲤游嚟游去，捉唔到，亦唔喺纸条度。',
+  '满洲窗':'满洲窗啲彩色玻璃好靓，不过纸条冇写喔。',
+  '灯笼':'红灯笼挂得好高，唔使撕佢啦。',
+  '簕杜鹃':'簕杜鹃有簕㗎！咪乱摸。',
+  '鸡蛋花':'鸡蛋花好香……但系唔喺纸条度。',
+};
+const ROUND_SIZE = 10;
+const WORLD_SECONDS = 300;
+// 大件嘢：头几样撕得郁，撕咗三样之后再撕佢哋就会撕唔落、被扯入图纸
+const BIG = new Set(window.GARDEN_BIG);
+const HINT3D = window.GARDEN_HINT3D;
+
+const $ = s => document.querySelector(s);
+const NS = 'http://www.w3.org/2000/svg';
+const svgEl = (tag, attrs={}, parent) => {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+};
+const rand = (a,b) => a + Math.random()*(b-a);
+
+/* ---------------- 声音 ---------------- */
+let ac = null, master = null, voiceOn = true;
+function audio(){
+  if (!ac){
+    ac = new (window.AudioContext || window.webkitAudioContext)();
+    master = ac.createGain(); master.gain.value = .9; master.connect(ac.destination);
+  }
+  if (ac.state === 'suspended') ac.resume();
+  return ac;
+}
+function noiseBuffer(dur, fill){
+  const sr = ac.sampleRate, n = Math.floor(sr*dur);
+  const buf = ac.createBuffer(1, n, sr), d = buf.getChannelData(0);
+  fill(d, sr, n);
+  return buf;
+}
+// 撕纸声：纤维断裂嘅噼啪 + 持续嘅撕裂沙沙声，频带由低扫到高
+function playTear(len){
+  audio();
+  const dur = len || rand(.55,.7);
+  const buf = noiseBuffer(dur, (d, sr, n) => {
+    let snap = 0, brown = 0;
+    for (let i=0;i<n;i++){
+      const t = i/n;
+      const body = Math.pow(Math.sin(Math.PI*Math.min(1, t*1.05)), .5);
+      if (Math.random() < .0018 + .005*body) snap = .45 + Math.random()*.7;
+      snap *= .992;
+      const w = Math.random()*2-1;
+      brown = (brown + .025*w)/1.025;
+      d[i] = w*(.22*body + snap*.85) + brown*2.4*body;
+    }
+  });
+  const now = ac.currentTime;
+  const src = ac.createBufferSource(); src.buffer = buf; src.playbackRate.value = rand(.9,1.1);
+  const hp = ac.createBiquadFilter(); hp.type='highpass'; hp.frequency.value = 350;
+  const bp = ac.createBiquadFilter(); bp.type='bandpass'; bp.Q.value = .8;
+  bp.frequency.setValueAtTime(1300, now); bp.frequency.exponentialRampToValueAtTime(3600, now+dur);
+  const g = ac.createGain(); g.gain.value = 1.1;
+  src.connect(hp).connect(bp).connect(g).connect(master);
+  const lp = ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value = 850;
+  const g2 = ac.createGain(); g2.gain.value = .45;
+  src.connect(lp).connect(g2).connect(master);
+  src.start(now);
+}
+// 红笔划线：两下快速擦纸声
+function playPen(){
+  audio();
+  [0,.17].forEach(off => {
+    const buf = noiseBuffer(.15, (d,sr,n) => { for (let i=0;i<n;i++){ const t=i/n; d[i]=(Math.random()*2-1)*Math.sin(Math.PI*t)*(.6+.4*Math.sin(t*60)); } });
+    const s = ac.createBufferSource(); s.buffer = buf;
+    const f = ac.createBiquadFilter(); f.type='bandpass'; f.frequency.value = 4200; f.Q.value = 1.4;
+    const g = ac.createGain(); g.gain.value = .35;
+    s.connect(f).connect(g).connect(master); s.start(ac.currentTime + off);
+  });
+}
+function playThud(){
+  audio();
+  const now = ac.currentTime;
+  const o = ac.createOscillator(); o.type='triangle';
+  o.frequency.setValueAtTime(160, now); o.frequency.exponentialRampToValueAtTime(55, now+.18);
+  const g = ac.createGain(); g.gain.setValueAtTime(.55, now); g.gain.exponentialRampToValueAtTime(.001, now+.22);
+  o.connect(g).connect(master); o.start(now); o.stop(now+.25);
+}
+function playWin(){
+  audio();
+  const notes = [523.25,587.33,659.25,783.99,880,1046.5];
+  notes.forEach((f,i) => {
+    const t = ac.currentTime + i*.11;
+    const o = ac.createOscillator(); o.type='square'; o.frequency.value = f;
+    const g = ac.createGain(); g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.12,t+.02); g.gain.exponentialRampToValueAtTime(.0001,t+.3);
+    const lp = ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value = 2500;
+    o.connect(lp).connect(g).connect(master); o.start(t); o.stop(t+.32);
+  });
+}
+function playWhoosh(){
+  audio();
+  const now = ac.currentTime, dur = 1.6;
+  const buf = noiseBuffer(dur, (d,sr,n) => { for (let i=0;i<n;i++) d[i] = (Math.random()*2-1); });
+  const s = ac.createBufferSource(); s.buffer = buf;
+  const f = ac.createBiquadFilter(); f.type='bandpass'; f.Q.value = 3;
+  f.frequency.setValueAtTime(300, now); f.frequency.exponentialRampToValueAtTime(2600, now+dur*.8);
+  const g = ac.createGain(); g.gain.setValueAtTime(.001, now); g.gain.exponentialRampToValueAtTime(.8, now+dur*.75); g.gain.exponentialRampToValueAtTime(.001, now+dur);
+  s.connect(f).connect(g).connect(master); s.start(now);
+  const o = ac.createOscillator(); o.type='sine';
+  o.frequency.setValueAtTime(110, now); o.frequency.exponentialRampToValueAtTime(880, now+dur);
+  const g2 = ac.createGain(); g2.gain.setValueAtTime(.001, now); g2.gain.exponentialRampToValueAtTime(.18, now+dur*.8); g2.gain.exponentialRampToValueAtTime(.001, now+dur);
+  o.connect(g2).connect(master); o.start(now); o.stop(now+dur);
+}
+let lastBlip = 0;
+function playBlip(){
+  if (!ac) return; const now = ac.currentTime; if (now - lastBlip < .06) return; lastBlip = now;
+  const o = ac.createOscillator(); o.type='square'; o.frequency.value = rand(520,640);
+  const g = ac.createGain(); g.gain.setValueAtTime(.035, now); g.gain.exponentialRampToValueAtTime(.0001, now+.05);
+  o.connect(g).connect(master); o.start(now); o.stop(now+.06);
+}
+let voice = null;
+function sayWord(w){
+  const info = WORDS[w]; if (!info || !info.audio) return;
+  if (voice){ voice.pause(); }
+  voice = new Audio(info.audio);
+  voice.play().catch(()=>{});
+}
+
+/* ---------------- 词条（实时查 DimSum 语料库） ---------------- */
+async function loadCorpus(){
+  const words = Object.keys(WORDS); let ok = 0;
+  await Promise.all(words.map(async w => {
+    try{
+      const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 8000);
+      const r = await fetch(API + '?data=' + encodeURIComponent(w), {signal: ctl.signal});
+      clearTimeout(tm);
+      const d = await r.json();
+      if (!d || d.data !== w) return;
+      const c = (d.note && d.note.context) || {};
+      const sn = d.structured_note && d.structured_note.data && d.structured_note.data[0];
+      let jp = (sn && sn.jyutping) || '';
+      // 语料偶有粤拼缺字（如「火水炉」），音节数对唔上就用本地校正版
+      if (jp.trim().split(/\s+/).length !== [...w].length) jp = WORDS[w].jp;
+      WORDS[w] = {
+        jp,
+        mean: (c['普通话翻译'] || WORDS[w].mean).replace(/^习语。/, '').replace(/[\uE000-\uF8FF]/g, ''),  // 语料入面有私用区字符，显示唔到
+        audio: c.audio || WORDS[w].audio,
+      };
+      ok++;
+    }catch(e){}
+  }));
+  $('#src').innerHTML = (ok
+    ? `词条实时取自 <a href="https://search.aidimsum.com/docs" target="_blank" rel="noopener">DimSum 粤语语料库</a>（现代粤语词典，${ok}/${words.length}）`
+    : '离线模式：用紧内置嘅 DimSum 语料快照') + '<br>撕咗之后会读出粤语发音。';
+  renderList();
+}
+
+/* ---------------- 游戏状态 ---------------- */
+let round = [], found = new Set(), tearing = new Set(), hints = 0, t0 = 0, timer = null, started = false;
+let busy = false, inWorld = false, worldEntered = false;
+const hitOf = w => document.querySelector(`.hit[data-w="${w}"]`);
+const boxOf = el => ['x','y','width','height'].map(k => +el.getAttribute(k));
+
+function shuffle(a){ for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+function newRound(){
+  do { round = shuffle(Object.keys(WORDS)).slice(0, ROUND_SIZE); } while (round.filter(w => BIG.has(w)).length < 2);
+  if (inWorld){ World.exit(); inWorld = false; $('#world').hidden = true; }
+  worldEntered = false; busy = false; won = false;
+  const b = $('#board'); b.style.display = ''; b.classList.remove('suck','strain'); $('.left').classList.remove('in-world'); document.body.classList.remove('world-on');
+  ['#sysMsg','#timeUp'].forEach(s => $(s).hidden = true);
+  found.clear(); tearing.clear(); hints = 0;
+  $('#holes').innerHTML = ''; $('#pieces').innerHTML = ''; $('#fx').innerHTML = '';
+  $('#clip').innerHTML = '';
+  document.querySelectorAll('#map defs .tear-clip').forEach(n => n.remove());
+  renderList(); updateStatus();
+  t0 = Date.now(); clearInterval(timer);
+  timer = setInterval(updateStatus, 500);
+  $('#win').hidden = true;
+}
+
+function renderList(){
+  const ol = $('#list'); ol.innerHTML = '';
+  round.forEach((w,i) => {
+    const li = document.createElement('li');
+    li.dataset.w = w;
+    if (found.has(w)) li.classList.add('done');
+    const d = `M2 ${rand(11,15).toFixed(1)} C ${rand(15,25).toFixed(1)} ${rand(5,9).toFixed(1)}, ${rand(30,40).toFixed(1)} ${rand(16,20).toFixed(1)}, 50 ${rand(10,14).toFixed(1)} S ${rand(78,84).toFixed(1)} ${rand(14,18).toFixed(1)}, 98 ${rand(7,11).toFixed(1)}`;
+    li.innerHTML = `<span class="n">${i+1}.</span><span class="w">${w}<svg viewBox="0 0 100 24" preserveAspectRatio="none"><path pathLength="1" vector-effect="non-scaling-stroke" d="${d}"/></svg></span><small class="jp">${WORDS[w].jp}</small><button class="say" title="听读音">🔈</button>`;
+    li.title = WORDS[w].mean;
+    li.querySelector('.say').onclick = () => sayWord(w);
+    ol.appendChild(li);
+  });
+  $('#tot').textContent = round.length;
+}
+
+function updateStatus(){
+  $('#cnt').textContent = found.size;
+  const s = Math.floor((Date.now()-t0)/1000);
+  $('#time').textContent = String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+}
+
+let toastTm = null;
+function toast(html, ms=2600){
+  const t = $('#toast'); t.innerHTML = html; t.classList.add('show');
+  clearTimeout(toastTm); toastTm = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+/* ---------------- 撕纸 ---------------- */
+function jagged(x, y, w, h){
+  const pad = 6; x -= pad; y -= pad; w += pad*2; h += pad*2;
+  const pts = [], step = 7;
+  const edge = (x1,y1,x2,y2,nx,ny) => {
+    const n = Math.max(2, Math.round(Math.hypot(x2-x1,y2-y1)/step));
+    for (let i=0;i<n;i++){
+      const t = i/n, j = rand(-4.5,4.5);
+      pts.push([x1+(x2-x1)*t + nx*j, y1+(y2-y1)*t + ny*j]);
+    }
+  };
+  edge(x,y,x+w,y,0,1); edge(x+w,y,x+w,y+h,1,0); edge(x+w,y+h,x,y+h,0,1); edge(x,y+h,x,y,1,0);
+  return pts;
+}
+const ptsAttr = pts => pts.map(p => p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+
+let clipSeq = 0;
+function tear(w, hit){
+  tearing.add(w);
+  const [x,y,bw,bh] = boxOf(hit);
+  const pts = jagged(x,y,bw,bh), P = ptsAttr(pts);
+  const cx = x+bw/2, cy = y+bh/2;
+
+  // 洞：露出底下嘅书台
+  const hole = svgEl('g', {opacity:0}, $('#holes'));
+  svgEl('polygon', {points:P, fill:'#2b1d14'}, hole);
+  svgEl('polygon', {points:P, fill:'none', stroke:'#000', 'stroke-width':10, opacity:.5, filter:'url(#holeShadow)'}, hole);
+  svgEl('polygon', {points:P, fill:'none', stroke:'#fbf3dc', 'stroke-width':3.2, filter:'url(#fiber)'}, hole);
+
+  // 撕出嚟嗰块纸：用 <use> 复制成张图纸，再用锯齿形裁出嚟
+  const id = 'tc' + (++clipSeq);
+  const cp = svgEl('clipPath', {id, class:'tear-clip', clipPathUnits:'userSpaceOnUse'}, $('#map defs'));
+  svgEl('polygon', {points:P}, cp);
+  const piece = svgEl('g', {class:'piece', filter:'url(#lift)'}, $('#pieces'));
+  const inner = svgEl('g', {'clip-path':`url(#${id})`}, piece);
+  svgEl('use', {href:'#scene'}, inner);
+  svgEl('polygon', {points:P, fill:'none', stroke:'#fffaf0', 'stroke-width':2.6, filter:'url(#fiber)'}, piece);
+
+  playTear();
+  hole.animate([{opacity:0},{opacity:1}], {duration:420, delay:120, fill:'forwards', easing:'ease-out'});
+
+  const peel = piece.animate([
+    {transform:'translate(0,0) rotate(0deg) scale(1)'},
+    {transform:'translate(-2px,-3px) rotate(-1.8deg) scale(1.01)', offset:.3},
+    {transform:'translate(4px,-9px) rotate(2.6deg) scale(1.04)', offset:.7},
+    {transform:'translate(7px,-15px) rotate(4deg) scale(1.06)'}
+  ], {duration:560, easing:'ease-in-out', fill:'forwards'});
+
+  setTimeout(() => scraps(pts), 260);
+
+  peel.onfinish = () => {
+    const fly = piece.animate([
+      {transform:'translate(7px,-15px) rotate(4deg) scale(1.06)', opacity:1},
+      {transform:`translate(${(1800-cx).toFixed(0)}px,${(300-cy).toFixed(0)}px) rotate(28deg) scale(.3)`, opacity:0}
+    ], {duration:620, easing:'cubic-bezier(.5,0,.8,.4)', fill:'forwards'});
+    fly.onfinish = () => { piece.remove(); cp.remove(); collect(w, x, y, bw, bh); };
+  };
+}
+
+function scraps(pts){
+  const fx = $('#fx');
+  for (let i=0;i<9;i++){
+    const p = pts[Math.floor(Math.random()*pts.length)];
+    const s = rand(3,7), poly = [];
+    for (let k=0;k<5;k++){ const a = k/5*Math.PI*2; poly.push([p[0]+Math.cos(a)*s*rand(.5,1.2), p[1]+Math.sin(a)*s*rand(.5,1.2)]); }
+    const el = svgEl('polygon', {points:ptsAttr(poly), fill: Math.random()<.7 ? '#f6ecd2' : '#e4cf9f', stroke:'#b9a27a', 'stroke-width':.6, class:'scrap'}, fx);
+    el.animate([
+      {transform:'translate(0,0) rotate(0deg)', opacity:1},
+      {transform:`translate(${rand(-40,40).toFixed(0)}px,${rand(60,140).toFixed(0)}px) rotate(${rand(-300,300).toFixed(0)}deg)`, opacity:0}
+    ], {duration:rand(700,1100), easing:'cubic-bezier(.3,.1,.6,1)', fill:'forwards'}).onfinish = () => el.remove();
+  }
+}
+
+function collect(w, x, y, bw, bh){
+  found.add(w); tearing.delete(w);
+  const li = document.querySelector(`#list li[data-w="${w}"]`);
+  if (li) li.classList.add('done');
+  playPen();
+
+  // 撕落嚟嗰块缩细贴喺纸条底
+  const th = document.createElement('div'); th.className = 'thumb';
+  const poly = []; for (let i=0;i<14;i++){ const a=i/14; poly.push(i<4 ? `${(a*4*100).toFixed(0)}% ${rand(0,8).toFixed(0)}%` : i<7 ? `${rand(92,100).toFixed(0)}% ${((a*14-4)/3*100).toFixed(0)}%` : i<11 ? `${(100-(a*14-7)/4*100).toFixed(0)}% ${rand(92,100).toFixed(0)}%` : `${rand(0,8).toFixed(0)}% ${(100-(a*14-11)/3*100).toFixed(0)}%`); }
+  th.style.clipPath = `polygon(${poly.join(',')})`;
+  th.style.transform = `rotate(${rand(-9,9).toFixed(1)}deg)`;
+  th.title = w;
+  th.innerHTML = `<svg viewBox="${x-6} ${y-6} ${bw+12} ${bh+12}" preserveAspectRatio="xMidYMid slice"><use href="#scene"/></svg>`;
+  $('#clip').appendChild(th);
+
+  const info = WORDS[w];
+  toast(`<span class="big">${w}</span><span class="jp">${info.jp}</span><br>${info.mean}`, 3600);
+  if (voiceOn && !inWorld) setTimeout(() => sayWord(w), 380);   // 园入面会自己读
+  updateStatus();
+  if (found.size === round.length){ if (!inWorld) setTimeout(winGame, 1100); else setTimeout(() => { if (inWorld) winGame(); }, 9000); }
+  else if (!inWorld && !worldEntered && found.size === 3 && round.some(x => BIG.has(x) && !found.has(x)))
+    setTimeout(() => toast('细件嘢撕咗几样喇……试下撕啲<b>大件</b>嘅？好似花阶砖、瓦檐口咁。', 3200), 3800);
+}
+
+let won = false;
+function winGame(){
+  if (won) return; won = true;
+  clearInterval(timer); updateStatus();
+  if (inWorld){
+    World.exit(); inWorld = false; $('#world').hidden = true;
+    const b = $('#board'); b.classList.remove('suck','strain'); b.style.display = ''; $('.left').classList.remove('in-world'); document.body.classList.remove('world-on');
+    $('#flash').classList.add('on'); setTimeout(() => $('#flash').classList.remove('on'), 500);
+  }
+  playWin();
+  $('#winText').innerHTML = `${round.length} 样嘢全部撕齐！<br>用咗 ${$('#time').textContent}${hints ? `，睇咗 ${hints} 次提示` : '，一次提示都冇睇，好叻！'}`;
+  $('#win').hidden = false;
+}
+
+function wrong(msg){
+  playThud();
+  const b = $('#board'); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
+  toast(msg, 1800);
+}
+
+/* ---------------- 互动 ---------------- */
+$('#hits').addEventListener('click', e => {
+  if (!started || busy) return;
+  const hit = e.target.closest('.hit'); if (!hit) return;
+  audio();
+  const w = hit.dataset.w, d = hit.dataset.d, big = hit.dataset.big;
+  // 头几样撕得郁；撕咗三样之后，再撕大件嘢就撕唔落、成个人被扯入图
+  if (found.size >= 3 && (big || (w && BIG.has(w) && round.includes(w) && !found.has(w)))) return stuckTear(hit, e);
+  if (big) return wrong(`「${big}」太大件喇，撕唔郁——撕啲细件嘅先啦。`);
+  if (w){
+    if (found.has(w) || tearing.has(w)) return;
+    if (round.includes(w)) tear(w, hit);
+    else wrong(`「${w}」今次唔喺纸条度喔～`);
+  } else if (d){
+    wrong(DISTRACT[d] || '唔系呢样喔～');
+  }
+});
+
+/* ---------------- 撕唔落 → 扯入图纸 ---------------- */
+function stuckTear(hit, ev){
+  busy = true; worldEntered = true;
+  const [x,y,bw,bh] = boxOf(hit);
+  const pts = jagged(x,y,bw,bh);
+  const k0 = Math.floor(Math.random()*pts.length), seg = [];
+  for (let i=0;i<Math.floor(pts.length*.4);i++) seg.push(pts[(k0+i)%pts.length]);
+  const crack = svgEl('polyline', {points:ptsAttr(seg), fill:'none', stroke:'#2b1d14', 'stroke-width':4.5, pathLength:1, 'stroke-dasharray':1, 'stroke-dashoffset':1, filter:'url(#fiber)'}, $('#fx'));
+  const board = $('#board');
+  const steps = [['嘶——', .32], ['撕唔郁！再用力啲……', .55], ['嘶嘶嘶——！！', .72]];
+  steps.forEach(([msg, to], i) => setTimeout(() => {
+    playTear(.45 + i*.15);
+    crack.animate([{strokeDashoffset: i ? 1-steps[i-1][1] : 1},{strokeDashoffset: 1-to}], {duration:420, fill:'forwards', easing:'ease-out'});
+    board.classList.remove('strain'); void board.offsetWidth; board.classList.add('strain');
+    toast(msg, 900);
+  }, i*850));
+  setTimeout(() => {
+    toast('撕唔落！张图纸好似有股力……将你扯咗入去！', 2000);
+    const r = board.getBoundingClientRect();
+    board.style.setProperty('--ox', ((ev.clientX - r.left)/r.width*100).toFixed(1)+'%');
+    board.style.setProperty('--oy', ((ev.clientY - r.top)/r.height*100).toFixed(1)+'%');
+    board.classList.remove('strain'); board.classList.add('suck');
+    playWhoosh();
+  }, 2700);
+  setTimeout(() => $('#flash').classList.add('on'), 4000);
+  setTimeout(() => { crack.remove(); enterWorld(); $('#flash').classList.remove('on'); }, 4500);
+}
+
+const fmt = s => String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+function enterWorld(){
+  inWorld = true; busy = false;
+  $('#board').style.display = 'none'; $('.left').classList.add('in-world'); document.body.classList.add('world-on');
+  $('#world').hidden = false;
+  const remaining = round.filter(w => !found.has(w) && !tearing.has(w));
+  World.enter({
+    need: remaining, torn: round.filter(w => found.has(w) || tearing.has(w)), seconds: WORLD_SECONDS, voice: voiceOn, total: round.length,
+    onGain: w => { const [x,y,bw,bh] = boxOf(hitOf(w)); collect(w,x,y,bw,bh); },
+    onDone: () => winGame(),
+    onHint: () => { hints++; },
+    onAgain: () => newRound(),
+    onVoice: on => { voiceOn = on; $('#muteBtn').textContent = '读音：' + (voiceOn ? '开' : '关'); },
+    onTimeUp: left => {
+      left = left || round.filter(w => !found.has(w));
+      playThud();
+      $('#timeUpText').innerHTML = `仲有 ${left.length} 样未搵到：${left.join('、')}。<br>你仲困喺图纸入面……`;
+      $('#timeUp').hidden = false;
+    },
+  });
+}
+$('#retryWorld').onclick = () => { $('#timeUp').hidden = true; enterWorld(); };
+document.querySelectorAll('.overlay').forEach(o => o.style.zIndex = 20);
+
+$('#hintBtn').onclick = () => {
+  if (inWorld){
+    const left = round.filter(w => !found.has(w));
+    if (!left.length) return;
+    hints++;
+    const w = left[Math.floor(Math.random()*left.length)];
+    toast(`「${w}」：${HINT3D[w]}`, 2600); playPen();
+    return;
+  }
+  const left = round.filter(w => !found.has(w) && !tearing.has(w));
+  if (!left.length) return;
+  hints++;
+  const w = left[Math.floor(Math.random()*left.length)];
+  const [x,y,bw,bh] = boxOf(hitOf(w));
+  const e = svgEl('ellipse', {cx:x+bw/2, cy:y+bh/2, rx:bw/2+16, ry:bh/2+14, fill:'none', stroke:'#c0362a', 'stroke-width':4, 'stroke-dasharray':'1', 'stroke-dashoffset':'1', pathLength:'1', filter:'url(#fiber)'}, $('#fx'));
+  e.animate([{strokeDashoffset:1},{strokeDashoffset:0}], {duration:600, fill:'forwards', easing:'ease-out'});
+  e.animate([{opacity:1},{opacity:0}], {duration:500, delay:1700, fill:'forwards'}).onfinish = () => e.remove();
+  playPen();
+  toast(`红笔圈住咗「${w}」嘅位置`, 1800);
+};
+$('#againBtn').onclick = newRound;
+$('#winAgain').onclick = newRound;
+$('#muteBtn').onclick = () => { voiceOn = !voiceOn; $('#muteBtn').textContent = '读音：' + (voiceOn ? '开' : '关'); };
+$('#startBtn').onclick = () => { audio(); started = true; $('#intro').hidden = true; newRound(); };
+
+do { round = shuffle(Object.keys(WORDS)).slice(0, ROUND_SIZE); } while (round.filter(w => BIG.has(w)).length < 2);
+if (location.search.includes('debug')) document.querySelectorAll('.hit').forEach(h => { h.style.fill = h.dataset.big ? 'rgba(0,0,255,.12)' : h.dataset.w ? 'rgba(0,255,0,.25)' : 'rgba(255,0,0,.22)'; h.style.stroke = '#fff'; });
+renderList();
+loadCorpus();
+if (location.search.includes('wintest')) { started = true; $('#intro').hidden = true; newRound(); round.forEach(w => found.add(w)); winGame(); }
+</script>
+</body>
+</html>

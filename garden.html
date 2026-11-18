@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>岭南寻物 · 园中搵嘢</title>
+<link rel="stylesheet" href="vendor/fonts/wenkai.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Zhi+Mang+Xing&display=swap" rel="stylesheet">
+<style>
+  :root { --gold: #f2c86a; --ink: #241a12; --red: #b8261c;
+    --kai: "Ma Shan Zheng", "WenKai Local", "STKaiti", "KaiTi", "Kaiti SC", serif;   /* 楷书；粤语字由内嵌霞鹜文楷粗体补 */
+    --brush: var(--kai);
+    --xing: "Zhi Mang Xing", "Ma Shan Zheng", "WenKai Local", "STXingkai", "STKaiti", serif; /* 行草 */ }
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; user-select: none; font-family: var(--kai); }
+  canvas { display: block; cursor: pointer; }
+  .layer { position: fixed; inset: 0; pointer-events: none; }
+  body.shot * { transition: none !important; animation: none !important; }
+
+  #loading { position: fixed; inset: 0; background: #0e0b08; color: #e8d9b8; display: grid; place-items: center; font: 22px var(--kai); letter-spacing: .4em; transition: opacity 1.2s; z-index: 10; }
+  #loading.off { opacity: 0; pointer-events: none; }
+
+  #title { display: grid; place-items: center; opacity: 0; transition: opacity 1.6s; text-align: center; color: #fff; text-shadow: 0 2px 18px rgba(0,0,0,.45); }
+  #title.on { opacity: 1; }
+  #title h1 { font: 96px var(--xing); letter-spacing: .25em; margin: 0 0 10px; padding-left: .25em; font-weight: 400; }
+  #title .sub { font: 22px var(--kai); letter-spacing: .5em; opacity: .92; }
+  #title .go { margin-top: 46px; font: 20px var(--kai); letter-spacing: .4em; animation: breathe 2.4s ease-in-out infinite; }
+  @keyframes breathe { 50% { opacity: .35; } }
+
+  #hud { opacity: 0; transition: opacity .8s; }
+  #hud.on { opacity: 1; }
+  /* 纸条：仲要搵嘅词 */
+  #note { position: absolute; left: 18px; top: 16px; padding: 12px 18px 12px 16px; background: linear-gradient(170deg, rgba(246,236,210,.93), rgba(232,214,176,.9));
+    color: var(--ink); border-radius: 2px; box-shadow: 0 6px 18px rgba(0,0,0,.3); transform: rotate(-1.2deg); }
+  #note h3 { margin: 0 0 4px; font: 22px var(--xing); letter-spacing: .15em; color: #6a3a1a; font-weight: 400; }
+  #words { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 22px; }
+  #words li { font: 21px/1.5 var(--brush); white-space: nowrap; position: relative; }
+  #words li small { font: 11px system-ui; color: #8a6a4a; margin-left: 4px; letter-spacing: 0; }
+  #words li.done .w { color: #9a8a74; }
+  #words li.done::after { content: ""; position: absolute; left: -2px; right: 30%; top: 52%; height: 3px; background: var(--red); border-radius: 2px; transform: rotate(-3deg); animation: strike .5s ease-out; }
+  #words li.torn::before { content: "撕"; position: absolute; left: -15px; top: 7px; font-size: 11px; color: var(--red); }
+  @keyframes strike { from { right: 100%; } }
+  #note h3 #cnt { font-size: 18px; color: var(--red); margin-left: 6px; letter-spacing: .05em; }
+  #bar { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(90,60,30,.35); pointer-events: auto; }
+  #timer { font: 24px var(--kai); color: #3a2414; min-width: 64px; }
+  #timer::before { content: "⏱ "; font-size: 15px; }
+  #bar button { font: 16px var(--kai); color: #3a2414; background: #f6e7c4; border: 1.5px solid #5a3a1e; border-radius: 3px; padding: 2px 8px; cursor: pointer; box-shadow: 0 2px 0 #5a3a1e; white-space: nowrap; }
+  #bar button kbd { font: 600 10px system-ui; color: #9a6a3a; margin-right: 4px; vertical-align: 2px; }
+  #timer.warn { color: #d8301c; animation: blink .8s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: .35; } }
+
+  #cross { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: rgba(255,255,255,.85);
+    box-shadow: 0 0 4px rgba(0,0,0,.6); transition: all .18s cubic-bezier(.2,1.6,.4,1); }
+  #cross.hot { width: 34px; height: 34px; margin: -17px 0 0 -17px; background: transparent; border: 2px solid var(--gold); box-shadow: 0 0 14px rgba(242,200,106,.8), inset 0 0 10px rgba(242,200,106,.5); }
+  #prompt { position: absolute; left: 50%; top: calc(50% + 42px); transform: translate(-50%, 8px); opacity: 0; transition: all .2s; color: #fff; font: 24px var(--kai); letter-spacing: .15em; text-shadow: 0 1px 8px rgba(0,0,0,.8); white-space: nowrap; }
+  #prompt.on { opacity: 1; transform: translate(-50%, 0); }
+  #prompt.dim { color: #ddd; font-size: 18px; }
+  #prompt kbd { display: inline-block; min-width: 20px; padding: 1px 6px; margin-right: 8px; border: 1px solid var(--gold); border-radius: 4px; color: var(--gold); font: 600 14px system-ui; letter-spacing: 0; vertical-align: 3px; }
+  #prompt.dim kbd { border-color: #bbb; color: #bbb; }
+
+  #tip { position: absolute; left: 50%; top: 22px; transform: translate(-50%, -10px); opacity: 0; transition: all .5s; padding: 8px 24px; border-radius: 30px;
+    background: rgba(20,14,8,.5); backdrop-filter: blur(6px); color: #fbf3e0; font: 20px var(--kai); letter-spacing: .1em; white-space: nowrap; }
+  #tip.on { opacity: 1; transform: translate(-50%, 0); }
+  #hintArrow { position: absolute; left: 50%; top: 50%; width: 0; height: 0; border-left: 26px solid var(--gold); border-top: 15px solid transparent; border-bottom: 15px solid transparent;
+    filter: drop-shadow(0 0 8px rgba(242,200,106,.9)); opacity: 0; transition: opacity .3s; }
+
+  #card { position: absolute; right: 6vw; top: 50%; width: 360px; transform: translate(40px, -50%); opacity: 0; transition: all .7s cubic-bezier(.2,1,.3,1); pointer-events: auto;
+    background: linear-gradient(160deg, rgba(250,243,228,.97), rgba(238,226,200,.95)); color: var(--ink); padding: 26px 30px 24px; border-radius: 3px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.35); border-top: 4px solid var(--red); }
+  #card.on { opacity: 1; transform: translate(0, -50%); }
+  #card-tag { font: 16px var(--kai); letter-spacing: .4em; color: #9a6a3a; }
+  #card-word { font: 64px/1.15 var(--xing); margin: 6px 0 2px; color: #2a1810; }
+  #card-jp { font: 15px system-ui; color: var(--red); letter-spacing: .06em; }
+  #card-say { margin-left: 10px; border: 1px solid var(--red); background: transparent; color: var(--red); border-radius: 14px; padding: 1px 10px; font: 13px system-ui; cursor: pointer; vertical-align: 2px; }
+  #card-desc { font: 21px/1.7 var(--kai); color: #4a3a2a; margin-top: 12px; }
+  #card-count { margin-top: 14px; font: 17px var(--kai); letter-spacing: .3em; color: var(--red); }
+
+  #paused { display: grid; place-items: center; background: rgba(0,0,0,.35); color: #fff; font: 26px var(--kai); letter-spacing: .4em; opacity: 0; transition: opacity .3s; }
+  #paused.on { opacity: 1; }
+
+  #sys { display: grid; place-items: center; opacity: 0; transition: opacity .6s; }
+  #sys.on { opacity: 1; pointer-events: auto; }
+  #sys .card2 { width: min(460px, 86vw); padding: 26px 32px 28px; background: linear-gradient(165deg, #f6ecd2, #e8d4a8); color: var(--ink); border-radius: 3px; box-shadow: 0 24px 70px rgba(0,0,0,.45); text-align: center; transform: rotate(-.8deg); }
+  #sys .tag { display: inline-block; padding: 2px 12px; background: var(--red); color: #fff3d6; font: 16px var(--kai); letter-spacing: .3em; }
+  #sys h3 { font: 46px var(--kai); margin: 12px 0 6px; }
+  #sys p { font: 20px/1.75 var(--kai); margin: 8px 0; }
+  #sys button { margin-top: 12px; font: 26px var(--kai); padding: 6px 34px; border: 0; background: var(--red); color: #fff3d6; border-radius: 3px; cursor: pointer; letter-spacing: .3em; box-shadow: 0 4px 0 #6a140e; }
+
+  #end { display: grid; place-items: center; text-align: center; color: #fff; opacity: 0; transition: opacity 2s; text-shadow: 0 2px 20px rgba(0,0,0,.5); }
+  #end.on { opacity: 1; }
+  #end h2 { font: 88px var(--xing); letter-spacing: .3em; margin: 0 0 16px; padding-left: .3em; font-weight: 400; }
+  #end p { font: 22px var(--kai); letter-spacing: .3em; margin: 6px; }
+</style>
+</head>
+<body>
+<div id="loading">园 门 开 启 中</div>
+
+<div id="title" class="layer"><div>
+  <h1>岭南寻物</h1>
+  <div class="sub">园 中 搵 嘢 · 午 后 四 时</div>
+  <div class="go">— 点 击 入 园 —</div>
+</div></div>
+
+<div id="hud" class="layer">
+  <div id="note">
+    <h3>阿婆托你搵：<span id="cnt"></span></h3>
+    <ul id="words"></ul>
+    <div id="bar">
+      <span id="timer">05:00</span>
+      <button id="bHint"><kbd>Q</kbd>提示</button>
+      <button id="bAgain"><kbd>R</kbd>再嚟一铺</button>
+      <button id="bVoice"><kbd>V</kbd>读音：开</button>
+    </div>
+  </div>
+  <div id="cross"></div>
+  <div id="prompt"><kbd>E</kbd><span id="prompt-name"></span></div>
+  <div id="tip"></div>
+  <div id="hintArrow"></div>
+  <div id="card">
+    <div id="card-tag">搵 到 一 样</div>
+    <div id="card-word"></div>
+    <div><span id="card-jp"></span><button id="card-say">🔈 再听</button></div>
+    <div id="card-desc"></div>
+    <div id="card-count"></div>
+  </div>
+</div>
+<div id="paused" class="layer">点 击 继 续</div>
+<div id="sys" class="layer"><div class="card2">
+  <span class="tag">系统提示</span>
+  <h3>你入咗图纸</h3>
+  <p>张纸撕唔落，反而将你成个人扯咗入去！<br>张图纸变咗真——你而家就企喺园门口。</p>
+  <p id="sys-text"></p>
+  <button id="sysGo">出发！</button>
+</div></div>
+<div id="end" class="layer"><div>
+  <h2 id="end-title">搞掂晒</h2>
+  <p id="end-time"></p>
+</div></div>
+
+<script>
+/* 先等毛笔字体（场景入面嘅牌匾、对联用 canvas 画，要字体到咗先画）；离线最多等 3 秒就用系统楷体 */
+(async () => {
+  const glyphs = '岭南寻物竹苞松茂忠厚传家久诗书继世长尋芳福' + '瓦公仔大葵扇一只屐饮早茶油纸遮太师椅担凳树头龙牙蕉花阶砖檐口琉璃';
+  try {
+    await Promise.race([
+      Promise.all(['Ma Shan Zheng', 'Zhi Mang Xing', 'WenKai Local'].map(f => document.fonts.load(`64px "${f}"`, glyphs))),
+      new Promise(r => setTimeout(r, 3000)),
+    ]);
+  } catch (e) {}
+  for (const src of ['vendor/three.min.js', 'garden/textures-data.js', 'garden/words.js', 'garden/core.js', 'garden/items.js', 'garden/world.js', 'garden/game.js'])
+    await new Promise(res => { const s = document.createElement('script'); s.src = src; s.onload = s.onerror = res; document.body.appendChild(s); });
+})();
+</script>
+</body>
+</html>
