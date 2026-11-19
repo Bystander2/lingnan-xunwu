@@ -252,7 +252,8 @@ function resize() {
   bloomRT.forEach(r => { const w = Math.max(1, W / r.d | 0), h = Math.max(1, H / r.d | 0); r.a.setSize(w, h); r.b.setSize(w, h); });
   G.REFL.reflTexel.value.set(1 / w2, 1 / h2);
   finalMat.uniforms.res.value.set(W, H);
-  finalMat.uniforms.barH.value = Math.min(1, (W / 2.39) / H);
+  // 2.39:1 电影黑边；竖屏 / 细屏会黑咗大半，所以上下黑边合共最多占 16%
+  finalMat.uniforms.barH.value = Math.max(.84, Math.min(1, (W / 2.39) / H));
   G.camera.aspect = W / H; G.camera.updateProjectionMatrix();
 }
 addEventListener('resize', resize); resize();

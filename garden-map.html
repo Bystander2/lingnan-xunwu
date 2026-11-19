@@ -64,7 +64,7 @@ header p{margin:4px 0 0; font-size:13px; opacity:.75; letter-spacing:.15em}
   60%{transform:rotate(-.6deg) translateX(-4px)} 80%{transform:rotate(-.6deg) translateX(3px)}
 }
 #map{display:block; width:100%; height:auto; cursor:crosshair; user-select:none; -webkit-user-select:none; touch-action:manipulation}
-.hit{fill:transparent; pointer-events:all}
+.hit{fill:transparent; pointer-events:all; cursor:pointer; -webkit-tap-highlight-color:transparent}   /* cursor:pointer：iOS Safari 先肯对 SVG 发 click */
 .neon-glow{animation:flicker 4s infinite}
 @keyframes flicker{0%,18%,22%,62%,64%,100%{opacity:1} 20%,63%{opacity:.45}}
 .piece,.scrap{transform-box:fill-box; transform-origin:center}
@@ -95,9 +95,11 @@ header p{margin:4px 0 0; font-size:13px; opacity:.75; letter-spacing:.15em}
 }
 #list li .n{font-size:16px; color:#8a7a66; width:22px}
 #list li .w{position:relative; display:inline-block; white-space:nowrap; flex:none}
-#list li .w svg{position:absolute; left:-6px; right:-6px; top:4px; width:calc(100% + 12px); height:26px; overflow:visible; pointer-events:none}
-#list li .w path{fill:none; stroke:#c0362a; stroke-width:3.2; stroke-linecap:round; stroke-dasharray:1; stroke-dashoffset:1; transition:stroke-dashoffset .45s ease-out}
-#list li.done .w path{stroke-dashoffset:0}
+/* 红笔划线：用 clip-path 由左至右揭开。唔用 pathLength + dashoffset，因为 Safari 配 non-scaling-stroke 会算错、一开波就全部划晒 */
+#list li .w svg{position:absolute; left:-6px; right:-6px; top:4px; width:calc(100% + 12px); height:26px; overflow:visible; pointer-events:none;
+  -webkit-clip-path:inset(-6px 100% -6px -6px); clip-path:inset(-6px 100% -6px -6px); transition:clip-path .45s ease-out, -webkit-clip-path .45s ease-out; visibility:hidden}
+#list li .w path{fill:none; stroke:#c0362a; stroke-width:3.2; stroke-linecap:round}
+#list li.done .w svg{-webkit-clip-path:inset(-6px -6px -6px -6px); clip-path:inset(-6px -6px -6px -6px); visibility:visible}
 #list li.done .w{color:#6d6a66}
 #list li .jp{font-family:var(--print); font-size:11px; overflow:hidden; text-overflow:ellipsis; min-width:0; color:#9a3b2c; opacity:0; transition:opacity .4s .3s; white-space:nowrap}
 #list li.done .jp{opacity:1}
@@ -134,24 +136,24 @@ header p{margin:4px 0 0; font-size:13px; opacity:.75; letter-spacing:.15em}
   40%{transform:rotate(-3deg) scale(1.25); filter:sepia(.3)}
   100%{transform:rotate(12deg) scale(9); filter:blur(6px) brightness(1.8); opacity:0}
 }
-#flash{position:fixed; inset:0; background:#fbf3dc; opacity:0; pointer-events:none; z-index:25; transition:opacity .5s}
+#flash{position:fixed; top:0;right:0;bottom:0;left:0; background:#fbf3dc; opacity:0; pointer-events:none; z-index:25; transition:opacity .5s}
 #flash.on{opacity:1}
 
 /* ---------- 第二幕（园林 iframe） ---------- */
-#world .w-frame{position:absolute; inset:0; width:100%; height:100%; border:0; display:block}
+#world .w-frame{position:absolute; top:0;right:0;bottom:0;left:0; width:100%; height:100%; border:0; display:block}
 body.world-on .note{display:none !important}   /* 第二幕用园入面嗰张纸条（含提示 / 计时 / 再嚟一铺 / 读音） */
 #world{position:relative; aspect-ratio:1600/1000; width:100%; background:#2a1c13; overflow:hidden;
   box-shadow:0 18px 40px rgba(0,0,0,.55); border:12px solid #f4ead2; transform:rotate(-.6deg)}
-.w-ov{position:absolute; inset:0; width:100%; height:100%; z-index:1; pointer-events:none}
+.w-ov{position:absolute; top:0;right:0;bottom:0;left:0; width:100%; height:100%; z-index:1; pointer-events:none}
 .w-cap{position:absolute; left:5%; right:5%; top:68px; z-index:2; text-align:center; font-family:var(--hand); font-size:clamp(17px,2.1vh,24px); line-height:1.35; color:#fff6dc;
   background:rgba(40,24,12,.78); padding:8px 14px; border-radius:4px; opacity:0; transform:translateY(-8px); transition:opacity .35s, transform .35s; pointer-events:none}
 .w-cap.show{opacity:1; transform:none}
 #world[hidden]{display:none}
-#world::after{content:""; position:absolute; inset:0; z-index:4; pointer-events:none; background:#f4ead2; opacity:0; transition:opacity .45s}
+#world::after{content:""; position:absolute; top:0;right:0;bottom:0;left:0; z-index:4; pointer-events:none; background:#f4ead2; opacity:0; transition:opacity .45s}
 #world.w-cross::after{opacity:1}
 /* 入咗图纸：成个画面都系图纸，纸条变成最上面一行 */
-body.world-on{overflow:hidden}
-body.world-on #world{position:fixed; inset:0; width:100vw; height:100vh; aspect-ratio:auto; border:0; transform:none; box-shadow:none; z-index:12}
+body.world-on{overflow:hidden; touch-action:none; overscroll-behavior:none}
+body.world-on #world{position:fixed; top:0;right:0;bottom:0;left:0; width:100vw; height:100vh; aspect-ratio:auto; border:0; transform:none; box-shadow:none; z-index:12}
 body.world-on .note{position:fixed; top:0; left:0; right:0; width:auto; z-index:13; transform:none; clip-path:none;
   display:flex; flex-wrap:wrap; align-items:center; gap:4px 18px; padding:8px 16px; background:linear-gradient(#f8f0dc,#efe3c4); box-shadow:0 3px 10px rgba(0,0,0,.35)}
 body.world-on .note .tape, body.world-on .note .sub, body.world-on .note .clip, body.world-on .note .src{display:none}
@@ -176,8 +178,8 @@ body.world-on .w-cap{top:86px}
   body.world-on .w-timer{bottom:auto; top:auto; bottom:84px; font-size:20px}
   body.world-on .w-cap{top:100px}
 }
-.w-canvas canvas{position:absolute; inset:0; width:100%!important; height:100%!important}
-.w-canvas::after{content:""; position:absolute; inset:0; pointer-events:none;
+.w-canvas canvas{position:absolute; top:0;right:0;bottom:0;left:0; width:100%!important; height:100%!important}
+.w-canvas::after{content:""; position:absolute; top:0;right:0;bottom:0;left:0; pointer-events:none;
   background:radial-gradient(ellipse at 50% 50%,transparent 70%,rgba(58,29,5,.32))}
 .w-timer{position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:2; white-space:nowrap;
   font-family:"ZCOOL XiaoWei",var(--print); font-size:26px; color:#2e2118; background:#fbf3dc;
@@ -220,7 +222,7 @@ body.world-on .w-cap{top:86px}
 
 /* ---------- 遮罩 ---------- */
 .overlay{
-  position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+  position:fixed; top:0;right:0;bottom:0;left:0; display:flex; align-items:center; justify-content:center;
   background:rgba(25,15,8,.62); z-index:30;
 }
 .overlay[hidden]{display:none}
@@ -238,6 +240,25 @@ body.world-on .w-cap{top:86px}
   font-family:"ZCOOL XiaoWei",var(--print); font-size:46px; letter-spacing:.15em;
   transform:rotate(-8deg); opacity:.88; animation:stampIn .4s cubic-bezier(.3,1.6,.5,1);
 }
+/* 后续卷目：敬请期待 */
+.scrolls{margin:4px 0 16px; padding-top:12px; border-top:1px dashed rgba(90,60,30,.45)}
+.scrolls .hd{font-size:14px; color:#7d6b55; margin-bottom:8px; letter-spacing:.1em}
+.scrolls ol{list-style:none; display:grid; grid-template-columns:1fr 1fr; gap:6px; margin:0 auto; padding:0; max-width:300px}
+.scrolls li{padding:4px 9px; border:1.5px solid #2e2118; background:#fbf3dc; font-size:12px; line-height:1.35; color:#2e2118}
+.scrolls li b{display:block; font-family:var(--hand); font-size:17px; font-weight:400}
+.scrolls li.now{border-color:#b33a2b; color:#b33a2b}
+.scrolls li.lock{border-style:dashed; opacity:.65}
+.win-btns{display:flex; gap:12px; justify-content:center; flex-wrap:wrap}
+/* 温返啲词：今铺搵到嘅词，逐个再听 */
+#review .card{width:min(520px,92vw)}
+#review ul{list-style:none; margin:0 0 16px; padding:0; max-height:min(56vh,460px); overflow:auto; text-align:left}
+#review li{display:grid; grid-template-columns:auto 1fr; gap:0 12px; align-items:center; padding:7px 4px; border-bottom:1px dashed rgba(90,60,30,.35); cursor:pointer}
+#review li:hover{background:rgba(251,243,220,.7)}
+#review li.playing .say{background:#b33a2b; color:#fbf3dc}
+#review .say{grid-row:span 2; width:38px; height:38px; padding:0; border-radius:50%; font-size:17px}
+#review .w{font-family:var(--brush); font-size:24px; color:#2e2118}
+#review .jp{margin-left:8px; font-size:14px; color:#2f6f6a}
+#review .mean{font-size:14px; line-height:1.5; color:#5a4a3a}
 @keyframes stampIn{from{transform:rotate(-8deg) scale(2.4); opacity:0}}
 </style>
 <script defer src="https://cloud.umami.is/script.js" data-website-id="c070122e-4a86-4827-aa85-86f1ccd9951c"></script>
@@ -362,6 +383,15 @@ body.world-on .w-cap{top:86px}
     <h3>岭南寻物</h3>
     <p class="hand">阿婆畀咗你一张纸条，<br>话要喺呢座老园林度搵齐啲嘢。</p>
     <p>喺园林图纸度搵出纸条写嘅嘢，<br>㩒一下就会「嘶——」咁撕落嚟，纸条上就会帮你划走。<br>撕啱咗仲会读埋粤语俾你听。<br>不过……有啲大件嘢，未必撕得郁。</p>
+    <div class="scrolls">
+      <div class="hd">岭南寻物 · 共四卷</div>
+      <ol>
+        <li class="now"><b>卷一 · 园林</b>今次呢卷</li>
+        <li class="lock"><b>卷二 · 骑楼街</b>🔒 敬请期待</li>
+        <li class="lock"><b>卷三 · 老茶楼</b>🔒 敬请期待</li>
+        <li class="lock"><b>卷四 · 水乡</b>🔒 敬请期待</li>
+      </ol>
+    </div>
     <button id="startBtn">开工！</button>
   </div>
 </div>
@@ -370,13 +400,38 @@ body.world-on .w-cap{top:86px}
   <div class="card">
     <div class="stamp">搞掂晒</div>
     <p class="hand" id="winText"></p>
-    <button id="winAgain">再嚟一铺</button>
+    <div class="scrolls">
+      <div class="hd">仲有几卷图纸未开</div>
+      <ol>
+        <li class="now"><b>卷一 · 园林</b>已通关</li>
+        <li class="lock"><b>卷二 · 骑楼街</b>🔒 敬请期待</li>
+        <li class="lock"><b>卷三 · 老茶楼</b>🔒 敬请期待</li>
+        <li class="lock"><b>卷四 · 水乡</b>🔒 敬请期待</li>
+      </ol>
+    </div>
+    <div class="win-btns">
+      <button id="winReview">🔈 温返啲词</button>
+      <button id="winAgain">再嚟一铺</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="review" hidden>
+  <div class="card">
+    <h3>温返啲词</h3>
+    <p class="hand" style="margin:0 0 10px">㩒一下就再读一次，跟住讲多几次就记得</p>
+    <ul id="reviewList"></ul>
+    <div class="win-btns">
+      <button id="reviewAll">▶ 全部顺住读</button>
+      <button id="reviewBack">返回</button>
+    </div>
   </div>
 </div>
 
 <script src="garden/words.js"></script>
 <script>
-/* Umami 统计：game-start / word-found / enter-world / world-timeup / win / heartbeat。
+/* Umami 统计：game-start / word-found / enter-world / world-timeup / win / heartbeat；
+   温返啲词：review-open（打开词表）/ review-play（单独听某个词）/ review-all（全部顺住读）/ review-back（返回）。
    script.js 未载入（网慢）时先排队，载入后按顺序补发；30 秒都载唔到（被拦截）就放弃。
    心跳每 30 秒一次（只喺页面睇得见时），令停留时长计得准，玩 30 分钟后停 */
 const track = (() => {
@@ -397,17 +452,18 @@ const World = (() => {
     else if (d.type === 'hint') opts.onHint && opts.onHint();
     else if (d.type === 'again') opts.onAgain && opts.onAgain();
     else if (d.type === 'voice') opts.onVoice && opts.onVoice(d.on);
+    else if (d.type === 'pause') setPaused(d.on);
   });
   return {
     enter(o){
       this.exit(); opts = o;
       frame = document.createElement('iframe'); frame.className = 'w-frame'; frame.allow = 'autoplay; fullscreen';
-      frame.src = 'garden.html?embed&' + new URLSearchParams({ need: o.need.join(','), torn: o.torn.join(','), sec: o.seconds, voice: o.voice ? 1 : 0, t0: Math.floor((Date.now() - t0) / 1000) });
+      frame.src = 'garden.html?embed&' + new URLSearchParams({ need: o.need.join(','), torn: o.torn.join(','), sec: o.seconds, voice: o.voice ? 1 : 0, t0: elapsedSec() });
       document.getElementById('world').appendChild(frame);
       frame.addEventListener('load', () => frame.focus());
     },
     start(){},
-    exit(){ if (frame){ frame.remove(); frame = null; } opts = null; },
+    exit(){ if (frame){ frame.remove(); frame = null; } opts = null; setPaused(false); },
   };
 })();
 </script>
@@ -429,10 +485,22 @@ const BIG = new Set(window.GARDEN_BIG);
 const HINT3D = window.GARDEN_HINT3D;
 
 const $ = s => document.querySelector(s);
+/* 旧 Safari（iPadOS 13.3 及以前）冇 Element.animate：用 CSS transition 顶住，只做头尾两帧，够撕纸 / 碎纸 / 红圈用 */
+if (!Element.prototype.animate) Element.prototype.animate = function(frames, o){
+  const el = this, dur = +o.duration || 0, delay = +o.delay || 0, a = { onfinish: null, cancel(){ clearTimeout(t); } };
+  const set = f => { for (const k in f) if (k !== 'offset' && k !== 'easing') el.style[k] = f[k]; };
+  el.style.transition = 'none'; set(frames[0]); el.getBoundingClientRect();
+  el.style.transition = `all ${dur}ms ${o.easing || 'linear'} ${delay}ms`; set(frames[frames.length - 1]);
+  const t = setTimeout(() => { el.style.transition = ''; if (a.onfinish) a.onfinish(); }, dur + delay + 30);
+  return a;
+};
 const NS = 'http://www.w3.org/2000/svg';
 const svgEl = (tag, attrs={}, parent) => {
   const e = document.createElementNS(NS, tag);
-  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  for (const k in attrs){
+    if (k === 'href') e.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', attrs[k]);   // 旧 Safari 只认 xlink:href
+    e.setAttribute(k, attrs[k]);
+  }
   if (parent) parent.appendChild(e);
   return e;
 };
@@ -572,6 +640,13 @@ async function loadCorpus(){
 
 /* ---------------- 游戏状态 ---------------- */
 let round = [], found = new Set(), tearing = new Set(), hints = 0, t0 = 0, timer = null, started = false;
+/* 总用时：扣走喺第二幕暂停（放开鼠标）嘅时间 */
+let pausedMs = 0, pauseAt = 0;
+function setPaused(on){
+  if (on && !pauseAt) pauseAt = Date.now();
+  else if (!on && pauseAt){ pausedMs += Date.now() - pauseAt; pauseAt = 0; }
+}
+const elapsedSec = () => Math.floor((Date.now() - t0 - pausedMs - (pauseAt ? Date.now() - pauseAt : 0)) / 1000);
 let busy = false, inWorld = false, worldEntered = false;
 const hitOf = w => document.querySelector(`.hit[data-w="${w}"]`);
 const boxOf = el => ['x','y','width','height'].map(k => +el.getAttribute(k));
@@ -583,13 +658,13 @@ function newRound(){
   if (inWorld){ World.exit(); inWorld = false; $('#world').hidden = true; }
   worldEntered = false; busy = false; won = false;
   const b = $('#board'); b.style.display = ''; b.classList.remove('suck','strain'); $('.left').classList.remove('in-world'); document.body.classList.remove('world-on');
-  ['#sysMsg','#timeUp'].forEach(s => $(s).hidden = true);
+  ['#sysMsg','#timeUp','#review'].forEach(s => $(s).hidden = true);
   found.clear(); tearing.clear(); hints = 0;
-  $('#holes').innerHTML = ''; $('#pieces').innerHTML = ''; $('#fx').innerHTML = '';
+  $('#holes').innerHTML = ''; holePolys = []; holeClips = []; $('#pieces').innerHTML = ''; $('#fx').innerHTML = '';
   $('#clip').innerHTML = '';
   document.querySelectorAll('#map defs .tear-clip').forEach(n => n.remove());
   renderList(); updateStatus();
-  t0 = Date.now(); clearInterval(timer);
+  t0 = Date.now(); pausedMs = 0; pauseAt = 0; clearInterval(timer);
   worldTries = 0; track('game-start', { round: ++roundNo });
   timer = setInterval(updateStatus, 500);
   $('#win').hidden = true;
@@ -602,7 +677,7 @@ function renderList(){
     li.dataset.w = w;
     if (found.has(w)) li.classList.add('done');
     const d = `M2 ${rand(11,15).toFixed(1)} C ${rand(15,25).toFixed(1)} ${rand(5,9).toFixed(1)}, ${rand(30,40).toFixed(1)} ${rand(16,20).toFixed(1)}, 50 ${rand(10,14).toFixed(1)} S ${rand(78,84).toFixed(1)} ${rand(14,18).toFixed(1)}, 98 ${rand(7,11).toFixed(1)}`;
-    li.innerHTML = `<span class="n">${i+1}.</span><span class="w">${w}<svg viewBox="0 0 100 24" preserveAspectRatio="none"><path pathLength="1" vector-effect="non-scaling-stroke" d="${d}"/></svg></span><small class="jp">${WORDS[w].jp}</small><button class="say" title="听读音">🔈</button>`;
+    li.innerHTML = `<span class="n">${i+1}.</span><span class="w">${w}<svg viewBox="0 0 100 24" preserveAspectRatio="none"><path vector-effect="non-scaling-stroke" d="${d}"/></svg></span><small class="jp">${WORDS[w].jp}</small><button class="say" title="听读音">🔈</button>`;
     li.title = WORDS[w].mean;
     li.querySelector('.say').onclick = () => sayWord(w);
     ol.appendChild(li);
@@ -612,7 +687,7 @@ function renderList(){
 
 function updateStatus(){
   $('#cnt').textContent = found.size;
-  const s = Math.floor((Date.now()-t0)/1000);
+  const s = elapsedSec();
   $('#time').textContent = String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
 }
 
@@ -639,26 +714,50 @@ function jagged(x, y, w, h){
 const ptsAttr = pts => pts.map(p => p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
 
 let clipSeq = 0;
+/* 已经撕咗嘅洞（锯齿多边形）。新撕嗰块要扣走呢啲位：张纸嗰度已经冇咗，唔可以再撕一次 */
+let holePolys = [];
+const inPoly = (x, y, pts) => { let c = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++){ const [xi, yi] = pts[i], [xj, yj] = pts[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
+const inHole = (x, y) => holePolys.some(p => inPoly(x, y, p));
+// 一个词嘅框有几多成已经喺洞入面（6×6 取样）
+const covered = el => { const [x,y,w,h] = boxOf(el); let n = 0; for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) if (inHole(x + (i + .5) / 6 * w, y + (j + .5) / 6 * h)) n++; return n / 36; };
+const svgPoint = e => { const m = $('#map'), p = m.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(m.getScreenCTM().inverse()); };
+/* 扣走旧洞：每个旧洞一个 clipPath（大矩形 + 个洞，evenodd = 除咗个洞以外），逐层套 <g>，交集就系「全部旧洞以外」。
+   唔用 <mask>：全图遮罩 + 纸纤维滤镜，图纸做缩放动画时 Mac Chrome 会成块画唔出、闪烁。 */
+let holeClips = [];
+function holeClip(pts){
+  const id = 'hx' + (++clipSeq);
+  const cp = svgEl('clipPath', {id, class:'tear-clip', clipPathUnits:'userSpaceOnUse'}, $('#map defs'));
+  svgEl('path', {d:`M-300 -300H1900V1300H-300Z M${pts.map(p => p.join(' ')).join('L')}Z`, 'clip-rule':'evenodd'}, cp);
+  holeClips.push(`url(#${id})`);
+}
+const outsideHoles = parent => holeClips.reduce((g, c) => svgEl('g', {'clip-path':c}, g), parent);
 function tear(w, hit){
   tearing.add(w);
   const [x,y,bw,bh] = boxOf(hit);
   const pts = jagged(x,y,bw,bh), P = ptsAttr(pts);
   const cx = x+bw/2, cy = y+bh/2;
 
-  // 洞：露出底下嘅书台
+  // 洞：露出底下嘅书台（深色底可以叠；纸边同阴影要扣走旧洞）
   const hole = svgEl('g', {opacity:0}, $('#holes'));
   svgEl('polygon', {points:P, fill:'#2b1d14'}, hole);
-  svgEl('polygon', {points:P, fill:'none', stroke:'#000', 'stroke-width':10, opacity:.5, filter:'url(#holeShadow)'}, hole);
-  svgEl('polygon', {points:P, fill:'none', stroke:'#fbf3dc', 'stroke-width':3.2, filter:'url(#fiber)'}, hole);
+  const rim = outsideHoles(hole);
+  svgEl('polygon', {points:P, fill:'none', stroke:'#000', 'stroke-width':10, opacity:.5, filter:'url(#holeShadow)'}, rim);
+  svgEl('polygon', {points:P, fill:'none', stroke:'#fbf3dc', 'stroke-width':3.2, filter:'url(#fiber)'}, rim);
 
-  // 撕出嚟嗰块纸：用 <use> 复制成张图纸，再用锯齿形裁出嚟
+  // 撕出嚟嗰块纸：用 <use> 复制成张图纸，再用锯齿形裁出嚟（再扣走旧洞）
   const id = 'tc' + (++clipSeq);
   const cp = svgEl('clipPath', {id, class:'tear-clip', clipPathUnits:'userSpaceOnUse'}, $('#map defs'));
   svgEl('polygon', {points:P}, cp);
   const piece = svgEl('g', {class:'piece', filter:'url(#lift)'}, $('#pieces'));
-  const inner = svgEl('g', {'clip-path':`url(#${id})`}, piece);
+  const body = outsideHoles(piece);
+  const inner = svgEl('g', {'clip-path':`url(#${id})`}, body);
   svgEl('use', {href:'#scene'}, inner);
-  svgEl('polygon', {points:P, fill:'none', stroke:'#fffaf0', 'stroke-width':2.6, filter:'url(#fiber)'}, piece);
+  svgEl('polygon', {points:P, fill:'none', stroke:'#fffaf0', 'stroke-width':2.6, filter:'url(#fiber)'}, body);
+
+  // 呢块撕走之后，纸条上仲有边样大部分都喺洞入面？—— 顺手一齐撕埋
+  holePolys.push(pts); holeClip(pts);
+  const along = round.filter(o => o !== w && !found.has(o) && !tearing.has(o) && hitOf(o) && covered(hitOf(o)) >= .6);
+  along.forEach(o => tearing.add(o));
 
   playTear();
   hole.animate([{opacity:0},{opacity:1}], {duration:420, delay:120, fill:'forwards', easing:'ease-out'});
@@ -677,7 +776,13 @@ function tear(w, hit){
       {transform:'translate(7px,-15px) rotate(4deg) scale(1.06)', opacity:1},
       {transform:`translate(${(1800-cx).toFixed(0)}px,${(300-cy).toFixed(0)}px) rotate(28deg) scale(.3)`, opacity:0}
     ], {duration:620, easing:'cubic-bezier(.5,0,.8,.4)', fill:'forwards'});
-    fly.onfinish = () => { piece.remove(); cp.remove(); collect(w, x, y, bw, bh); };
+    fly.onfinish = () => {
+      piece.remove(); cp.remove(); collect(w, x, y, bw, bh);
+      along.forEach((o, i) => setTimeout(() => {
+        const [ox,oy,ow,oh] = boxOf(hitOf(o)); collect(o, ox, oy, ow, oh);
+        toast(`顺手连<span class="big">${o}</span>都撕埋<span class="jp">${WORDS[o].jp}</span><br>${WORDS[o].mean}`, 3200);
+      }, 1500 * (i + 1)));
+    };
   };
 }
 
@@ -723,7 +828,7 @@ function collect(w, x, y, bw, bh){
 let won = false;
 function winGame(){
   if (won) return; won = true;
-  track('win', { seconds: Math.floor((Date.now() - t0) / 1000), hints, act: inWorld ? 2 : 1 });
+  track('win', { seconds: elapsedSec(), hints, act: inWorld ? 2 : 1 });
   clearInterval(timer); updateStatus();
   if (inWorld){
     World.exit(); inWorld = false; $('#world').hidden = true;
@@ -742,10 +847,21 @@ function wrong(msg){
 }
 
 /* ---------------- 互动 ---------------- */
-$('#hits').addEventListener('click', e => {
+/* iPad / iPhone：手指抬起就当撕（移动少过 12px 先算，避免拖动时误撕）；之后嗰个合成 click 唔再处理 */
+let touchTapAt = 0, tapStart = null;
+$('#hits').addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') tapStart = { x: e.clientX, y: e.clientY }; });
+$('#hits').addEventListener('pointerup', e => {
+  if (e.pointerType === 'mouse' || !tapStart) return;
+  const moved = Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y); tapStart = null;
+  if (moved > 12) return;
+  touchTapAt = Date.now(); onHit(e);
+});
+$('#hits').addEventListener('click', e => { if (Date.now() - touchTapAt > 700) onHit(e); });
+function onHit(e){
   if (!started || busy) return;
   const hit = e.target.closest('.hit'); if (!hit) return;
   audio();
+  { const p = svgPoint(e); if (inHole(p.x, p.y)) return wrong('呢度已经撕咗喇，剩低个窿～'); }
   const w = hit.dataset.w, d = hit.dataset.d, big = hit.dataset.big;
   // 头几样撕得郁；撕咗三样之后，再撕大件嘢就撕唔落、成个人被扯入图
   if (found.size >= 3 && (big || (w && BIG.has(w) && round.includes(w) && !found.has(w)))) return stuckTear(hit, e);
@@ -757,7 +873,7 @@ $('#hits').addEventListener('click', e => {
   } else if (d){
     wrong(DISTRACT[d] || '唔系呢样喔～');
   }
-});
+}
 
 /* ---------------- 撕唔落 → 扯入图纸 ---------------- */
 function stuckTear(hit, ev){
@@ -766,7 +882,9 @@ function stuckTear(hit, ev){
   const pts = jagged(x,y,bw,bh);
   const k0 = Math.floor(Math.random()*pts.length), seg = [];
   for (let i=0;i<Math.floor(pts.length*.4);i++) seg.push(pts[(k0+i)%pts.length]);
-  const crack = svgEl('polyline', {points:ptsAttr(seg), fill:'none', stroke:'#2b1d14', 'stroke-width':4.5, pathLength:1, 'stroke-dasharray':1, 'stroke-dashoffset':1, filter:'url(#fiber)'}, $('#fx'));
+  // 裂纹都要扣走已经撕咗嘅洞（唔好画喺细件个窿上面）
+  const crackG = svgEl('g', {}, $('#fx')), crackIn = outsideHoles(crackG);
+  const crack = svgEl('polyline', {points:ptsAttr(seg), fill:'none', stroke:'#2b1d14', 'stroke-width':4.5, pathLength:1, 'stroke-dasharray':1, 'stroke-dashoffset':1, filter:'url(#fiber)'}, crackIn);
   const board = $('#board');
   const steps = [['嘶——', .32], ['撕唔郁！再用力啲……', .55], ['嘶嘶嘶——！！', .72]];
   steps.forEach(([msg, to], i) => setTimeout(() => {
@@ -784,7 +902,7 @@ function stuckTear(hit, ev){
     playWhoosh();
   }, 2700);
   setTimeout(() => $('#flash').classList.add('on'), 4000);
-  setTimeout(() => { crack.remove(); enterWorld(); $('#flash').classList.remove('on'); }, 4500);
+  setTimeout(() => { crackG.remove(); enterWorld(); $('#flash').classList.remove('on'); }, 4500);
 }
 
 const fmt = s => String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
@@ -836,6 +954,28 @@ $('#hintBtn').onclick = () => {
 };
 $('#againBtn').onclick = newRound;
 $('#winAgain').onclick = newRound;
+/* 温返啲词：列出今铺嘅词，点边个读边个；「全部顺住读」逐个读落去 */
+let reviewSeq = 0;
+function playReview(li){
+  document.querySelectorAll('#reviewList li').forEach(x => x.classList.toggle('playing', x === li));
+  sayWord(li.dataset.w);
+  return new Promise(res => { if (!voice) return res(); voice.onended = voice.onerror = () => { li.classList.remove('playing'); res(); }; });
+}
+$('#winReview').onclick = () => {
+  $('#reviewList').innerHTML = round.map(w => `<li data-w="${w}"><button class="say" title="再听">🔈</button><span><span class="w">${w}</span><span class="jp">${WORDS[w].jp}</span></span><span class="mean">${WORDS[w].mean}</span></li>`).join('');
+  $('#win').hidden = true; $('#review').hidden = false;
+  track('review-open', { words: round.length });
+};
+$('#reviewList').onclick = e => { const li = e.target.closest('li'); if (li){ reviewSeq++; playReview(li); track('review-play', { word: li.dataset.w }); } };
+$('#reviewAll').onclick = async () => {
+  const my = ++reviewSeq; track('review-all');
+  for (const li of document.querySelectorAll('#reviewList li')){
+    if (my !== reviewSeq || $('#review').hidden) return;
+    li.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    await playReview(li); await new Promise(r => setTimeout(r, 450));
+  }
+};
+$('#reviewBack').onclick = () => { track('review-back'); reviewSeq++; if (voice) voice.pause(); $('#review').hidden = true; $('#win').hidden = false; };
 $('#muteBtn').onclick = () => { voiceOn = !voiceOn; $('#muteBtn').textContent = '读音：' + (voiceOn ? '开' : '关'); };
 $('#startBtn').onclick = () => { audio(); started = true; $('#intro').hidden = true; newRound(); };
 

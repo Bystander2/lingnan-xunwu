@@ -877,9 +877,9 @@ function bananaTex() {
   // 太师椅一对 + 茶几（廊下，两扇满洲窗之间）
   const TX = -6.1;   // 西侧满洲窗下，两柱之间
   G.TAISHI = new V3(TX, .45, -10.45);
-  for (const dx of [-.72, .72]) { const ch = G.makeTaishi(); ch.position.set(TX + dx, .45, -10.45); scene.add(ch); G.block(TX + dx - .35, -10.75, TX + dx + .35, -10.15); }
-  box(.5, .7, .45, M.woodDark, [TX, .45 + .35, -10.55]);
   G.TAISHI_OBJS = [];
+  for (const dx of [-.72, .72]) { const ch = G.makeTaishi(); ch.position.set(TX + dx, .45, -10.45); scene.add(ch); G.TAISHI_OBJS.push(ch); G.block(TX + dx - .35, -10.75, TX + dx + .35, -10.15); }
+  G.TAISHI_OBJS.push(box(.5, .7, .45, M.woodDark, [TX, .45 + .35, -10.55]));
   // 盆景台
   box(.7, .6, .45, M.granite, [-3.3, .38, -5.9]); G.block(-3.7, -6.15, -2.9, -5.65);
   G.SPOT_BONSAI = new V3(-3.3, .68, -5.9);

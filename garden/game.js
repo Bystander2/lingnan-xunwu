@@ -8,6 +8,8 @@ const $ = id => document.getElementById(id);
 const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 const clamp01 = t => Math.max(0, Math.min(1, t));
 const SHOT = G.Q.get('shot');
+let TOUCH = G.Q.has('touch') || matchMedia('(hover: none) and (pointer: coarse)').matches;
+if (TOUCH) document.body.classList.add('touch');
 
 /* ======================= 音频（全部合成）======================= */
 const A = {
@@ -33,10 +35,13 @@ const A = {
     // 鸟鸣
     const bird = () => { this.chirp(); setTimeout(bird, 1800 + Math.random() * 5200); };
     setTimeout(bird, 1200);
+    // 预先合成拾到 / 提示用嘅拨弦音，免得第一次㩒「拾」时先算、手机上顿一顿
+    setTimeout(() => [587.3, 659.3, 784, 880, 1174.7, 1568].forEach(f => this.ks(f)), 600);
   },
   panner(p, ref = 2, max = 30) {
     const pn = this.ctx.createPanner(); pn.panningModel = 'HRTF'; pn.distanceModel = 'inverse'; pn.refDistance = ref; pn.maxDistance = max; pn.rolloffFactor = 1.2;
-    pn.positionX.value = p[0]; pn.positionY.value = p[1]; pn.positionZ.value = p[2]; return pn;
+    if (pn.positionX) { pn.positionX.value = p[0]; pn.positionY.value = p[1]; pn.positionZ.value = p[2]; } else pn.setPosition(p[0], p[1], p[2]);   // 旧 Safari 冇 positionX
+    return pn;
   },
   listen(cam) {
     if (!this.ctx) return;
@@ -84,6 +89,11 @@ const A = {
     }
   },
   hint(pos) { if (!this.ctx) return; const t = this.ctx.currentTime + .02, d = this.panner([pos.x, pos.y, pos.z], 3, 60); d.connect(this.master); this.pluck(1174.7, t, .5, d); this.pluck(1568, t + .12, .4, d); },
+  miss() {
+    if (!this.ctx) return; const t = this.ctx.currentTime, o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = 'triangle'; o.frequency.setValueAtTime(320, t); o.frequency.exponentialRampToValueAtTime(180, t + .1);
+    g.gain.setValueAtTime(.12, t); g.gain.exponentialRampToValueAtTime(.001, t + .12); o.connect(g); g.connect(this.master); o.start(t); o.stop(t + .13);
+  },
   tick() {
     if (!this.ctx) return; const t = this.ctx.currentTime, o = this.ctx.createOscillator(), g = this.ctx.createGain();
     o.frequency.value = 2200; g.gain.setValueAtTime(.04, t); g.gain.exponentialRampToValueAtTime(.001, t + .04); o.connect(g); g.connect(this.master); o.start(t); o.stop(t + .05);
@@ -130,7 +140,7 @@ const PICKS = {
 const SPOTS = {
   '瓦公仔': { objs: G.ridgeFigs, center: new V3(0, 8.95, -12.6), seg: [new V3(-6.6, 8.95, -12.6), new V3(6.6, 8.95, -12.6)], range: 26, tol: 1.0 },
   '琉璃瓦': { center: new V3(0, 4.86, -7.4), seg: G.EAVE_SEG, range: 15, tol: .45 },
-  '太师椅': { center: G.TAISHI.clone().add(new V3(0, .6, 0)), radius: 1.1, range: 8 },
+  '太师椅': { objs: G.TAISHI_OBJS, center: G.TAISHI.clone().add(new V3(0, .6, 0)), radius: 1.1, range: 8 },
   '龙牙蕉': { objs: [G.BANANA_OBJ], center: G.BANANA, radius: 1.0, range: 8 },
   '花阶砖': { cond: () => inBox(G.TERRACE, .4) && P.pitch < -.2, at: () => camera.position.clone().add(fwd().multiplyScalar(1.6)).setY(.1) },
   '瓦檐口': { cond: () => P.pos.z < -7.5 && P.pos.z > -10.9 && Math.abs(P.pos.x) < 8.6 && P.pitch > .05, at: () => new V3(P.pos.x, 4.9, -7.5) },
@@ -141,7 +151,7 @@ const inBox = (b, pad = 0) => P.pos.x > b.x0 - pad && P.pos.x < b.x1 + pad && P.
 const targets = Object.keys(WORDS).map(w => {
   const t = { word: w, info: WORDS[w], big: BIGW.has(w), active: NEED.includes(w), found: false, flare: 0, phase: R() * 10 };
   if (PICKS[w]) {
-    t.kind = 'pick'; t.obj = PICKS[w]();
+    t.kind = 'pick'; t.obj = PICKS[w](); t.objs = [t.obj];
     if (TORN.includes(w)) t.obj.visible = false;                      // 喺图纸度撕走咗，园入面就冇咗
     const bs = new T.Box3().setFromObject(t.obj).getBoundingSphere(new T.Sphere());
     t.center = bs.center.clone(); t.radius = bs.radius; t.range = 6;
@@ -191,10 +201,19 @@ G.buildDepthList();
 /* ======================= 玩家 ======================= */
 const P = { pos: G.SPAWN.pos.clone(), vel: new V3(), yaw: G.SPAWN.yaw, pitch: 0, y: 0, bob: 0, lastStep: 0, fov: 64, sway: 0 };
 const keys = {};
-addEventListener('keydown', e => { keys[e.code] = true; onKey(e); });
-addEventListener('keyup', e => { keys[e.code] = false; });
+const JOY = { x: 0, y: 0, run: false };   // 触屏摇杆：x 右正、y 下正（向上推 = 向前）
+// 操作面板：㩒住边个键就亮边个（方向键当 WASD）
+const KEYMAP = { ArrowUp: 'KeyW', ArrowLeft: 'KeyA', ArrowDown: 'KeyS', ArrowRight: 'KeyD', ShiftLeft: 'Shift', ShiftRight: 'Shift' };
+const litKey = (code, on) => { const k = document.querySelector(`#keys [data-code="${KEYMAP[code] || code}"]`); if (k) k.classList.toggle('on', on); };
+addEventListener('keydown', e => { keys[e.code] = true; litKey(e.code, true); onKey(e); });
+addEventListener('keyup', e => { keys[e.code] = false; litKey(e.code, false); });
+addEventListener('blur', () => { for (const c in keys) { keys[c] = false; litKey(c, false); } });
+let mouseLitT = 0;
 addEventListener('mousemove', e => {
-  if (document.pointerLockElement && state === 'play') { P.yaw -= e.movementX * .0021; P.pitch = Math.max(-1.35, Math.min(1.35, P.pitch - e.movementY * .0021)); }
+  if (document.pointerLockElement && state === 'play') {
+    P.yaw -= e.movementX * .0021; P.pitch = Math.max(-1.35, Math.min(1.35, P.pitch - e.movementY * .0021));
+    if (e.movementX || e.movementY) { document.getElementById('kMouse').classList.add('on'); clearTimeout(mouseLitT); mouseLitT = setTimeout(() => document.getElementById('kMouse').classList.remove('on'), 150); }
+  }
 });
 function collide(p) {
   const r = .3;
@@ -212,9 +231,9 @@ function collide(p) {
   const B = G.BOUNDS; p.x = Math.max(B.x0, Math.min(B.x1, p.x)); p.z = Math.max(B.z0, Math.min(B.z1, p.z));
 }
 function updatePlayer(dt) {
-  const f = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
-  const s = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
-  const run = keys.ShiftLeft || keys.ShiftRight;
+  const f = Math.max(-1, Math.min(1, (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) - JOY.y));
+  const s = Math.max(-1, Math.min(1, (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0) + JOY.x));
+  const run = keys.ShiftLeft || keys.ShiftRight || JOY.run;
   const sp = run ? 5.4 : 3.1;
   const fw = new V3(-Math.sin(P.yaw), 0, -Math.cos(P.yaw)), rt = new V3(-fw.z, 0, fw.x);
   const want = fw.multiplyScalar(f).add(rt.multiplyScalar(s));
@@ -243,27 +262,52 @@ const playerPose = () => ({ pos: new V3(P.pos.x, P.y + 1.62, P.pos.z), quat: new
 
 /* ======================= 瞄准 ======================= */
 function segAim(o, f, seg, range) {
-  let best = 1e9, bt = 0;
+  let best = 1e9, bt = 0, bp = null;
   for (let i = 0; i <= 24; i++) {
     const p = new V3().lerpVectors(seg[0], seg[1], i / 24), v = p.clone().sub(o), t = v.dot(f);
     if (t < .5 || t > range) continue;
     const d = v.addScaledVector(f, -t).length();
-    if (d < best) { best = d; bt = t; }
+    if (d < best) { best = d; bt = t; bp = p; }
   }
-  return { d: best, t: bt };
+  return { d: best, t: bt, p: bp };
+}
+/* 视线检测：由眼睛射去目标中心，中途撞到墙 / 柱 / 屋就当睇唔到（隔墙唔可以拾）。
+   唔计树叶、蕉叶呢类镂空 / 半透明贴片同目标自己；结果缓存 0.15 秒，慳啲 raycast。 */
+const losRay = new T.Raycaster();
+// 遮挡物清单：只要实心网格（墙、柱、屋顶、家具），唔要成千上万块叶片嘅 InstancedMesh、镂空 / 半透明贴片、天空。
+// 第一次用先建；手机上逐块叶片做 raycast 会卡成几十毫秒一次。
+let OCC = null;
+const occluders = () => OCC || (OCC = (() => { const out = []; scene.traverse(m => {
+  if (m.isMesh && !m.isInstancedMesh && !m.isSprite && m !== G.sky && !(m.material && (m.material.transparent || m.material.alphaTest > 0))) out.push(m);
+}); return out; })());
+// 已经拾走嘅嘢係成个 Group 收埋（visible=false），所以要连父层一齐睇
+const shown = o => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
+const ownedBy = (o, objs) => { for (; o; o = o.parent) if (objs.includes(o)) return true; return false; };
+// 线状目标（瓦公仔、琉璃瓦）验准星最近嗰点，留 .45 余量免得撞到佢脚下嘅屋脊 / 瓦面
+function canSee(t) {
+  if (t.cond || !t.center) return true;
+  const now = G.time.value; if (t.losT !== undefined && now - t.losT < .15) return t.los;
+  const to = t.seg ? t.aimPt : t.center; if (!to) return true;
+  const o = camera.position, dir = to.clone().sub(o), d = dir.length();
+  losRay.set(o, dir.normalize()); losRay.near = .05; losRay.camera = camera;
+  losRay.far = t.seg ? Math.max(.1, d - .45) : t.objs ? d : Math.max(.1, d - t.radius * .6);
+  t.los = !losRay.intersectObjects(occluders(), false).some(h => shown(h.object) && !(t.objs && ownedBy(h.object, t.objs)));
+  t.losT = now; return t.los;
 }
 function aim() {
   const o = camera.position, f = fwd();
-  let best = null, bs = 1e9;
+  const cands = [];
   const test = (c, radius, range) => { const to = c.clone().sub(o), d = to.length(); if (d > range) return null; const a = f.angleTo(to), lim = Math.atan((radius + .45) / d) + .09; return a < lim ? a / lim : null; };
   for (const t of targets) {
     if (!t.active || t.found || (t.obj && !t.obj.visible)) continue;
     let s = null;
     if (t.cond) s = t.cond() ? .9 : null;
-    else if (t.seg) { const r = segAim(o, f, t.seg, t.range); if (r.d < t.tol + r.t * .015) s = r.d / (t.tol + r.t * .015); }
+    else if (t.seg) { const r = segAim(o, f, t.seg, t.range); if (r.d < t.tol + r.t * .015) { s = r.d / (t.tol + r.t * .015); t.aimPt = r.p; } }
     else s = test(t.center, t.radius, t.range);
-    if (s !== null && s < bs) { bs = s; best = t; }
+    if (s !== null) cands.push([s, t]);
   }
+  cands.sort((a, b) => a[0] - b[0]);
+  const best = (cands.find(([, t]) => canSee(t)) || [])[1] || null;
   if (!best) for (const d of DISTRACT) { const s = test(d.center, d.radius, d.range); if (s !== null) return { distract: d }; }
   return best;
 }
@@ -286,13 +330,14 @@ function showCard(t) {
   $('card').classList.add('on');
   setTimeout(() => say(t.word), 250);
 }
-$('card-say').onclick = e => { e.stopPropagation(); if (cine) say(cine.t0.word, true); };
 const hideCard = () => $('card').classList.remove('on');
 const updCount = () => { $('cnt').textContent = `${TORN.length + foundN} / ${ROUND.length}`; };
 const fmt = s => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0');
 
 /* ======================= 状态机 ======================= */
-let state = 'title', st = 0, startTime = 0, timeLeft = SECONDS;
+let state = 'title', st = 0, playT = 0, timeLeft = SECONDS, wasPaused = false;   // playT：真正玩咗几耐（暂停唔计）
+// 暂停 = 放开咗鼠标（Esc / 切走窗口）；暂停期间倒计时同行路都停
+const isPaused = () => !SHOT && !TOUCH && (state === 'play' || state === 'find') && !document.pointerLockElement;
 let foundN = 0, cine = null, hintCD = 0, hintT = 0, hintIt = null, hover = null;
 POST.bars = 1;
 // 图纸视角：同第一幕张图纸一模一样（用嚟渲染图纸、亦都系被扯入嚟嘅起点）
@@ -304,6 +349,7 @@ function onKey(e) {
     if (e.code === 'KeyQ' && hintCD <= 0) hint();
   }
   if (e.code === 'KeyV') toggleVoice();
+  if (e.code === 'KeyH') toggleKeys();
   if (e.code === 'KeyR' && state !== 'title') again();
   if (state === 'find' && (e.code === 'KeyE' || e.code === 'Space') && cine.t > 1.6 && cine.t < cine.D0) cine.t = cine.D0;
 }
@@ -313,13 +359,25 @@ function nearestAhead() {
   for (const t of targets) {
     if (!t.active || t.found || !t.center || t.cond || (t.obj && !t.obj.visible)) continue;
     const to = t.center.clone().sub(camera.position), d = to.length();
-    if (d < Math.min(t.range, 4) && f.angleTo(to) < .65 && d < bd) { bd = d; best = t; }
+    if (d < Math.min(t.range, 4) && f.angleTo(to) < .65 && d < bd && canSee(t)) { bd = d; best = t; }
   }
   return best;
 }
+// 㩒 E / 点击：准星扩散一圈；E 键闪一下；乜都冇对准就话俾佢知
+function ping(gold) {
+  const p = $('ping'); p.classList.remove('go', 'gold'); void p.offsetWidth; p.classList.add('go'); p.classList.toggle('gold', !!gold);
+  const k = document.querySelector('#keys [data-code="KeyE"]'); k.classList.add('on'); setTimeout(() => k.classList.toggle('on', !!keys.KeyE), 160);
+  $('prompt').classList.add('press'); setTimeout(() => $('prompt').classList.remove('press'), 140);
+}
+let missT = -9;
 function interact() {
   if (!hover) hover = (G.time.value - lastHoverT < .4 ? lastHover : null) || nearestAhead();
-  if (!hover) return;
+  ping(hover && !hover.distract);
+  if (!hover) {
+    A.miss();
+    if (G.time.value - missT > 3) { missT = G.time.value; showTip(TOUCH ? '呢度冇嘢拾 —— 行近啲，准星对准闪光嘅嘢，等「拾」掣变金先㩒' : '呢度冇嘢拾 —— 行近啲，准星对准闪光嘅嘢，等佢变金圈先㩒 E', 2.6); }
+    return;
+  }
   if (hover.distract) { showTip(hover.distract.msg, 2.2); A.tick(); return; }
   beginFind(hover);
 }
@@ -337,6 +395,8 @@ function again() {
   if (G.time.value - againArm > 2.5) { againArm = G.time.value; showTip('再㩒一次 R 就重新嚟过（会出返去图纸，重新抽纸条）', 2.5); return; }
   if (EMBED) post({ type: 'again' }); else location.reload();
 }
+function toggleKeys(min = !$('keys').classList.contains('min')) { $('keys').classList.toggle('min', min); $('keysFold').textContent = min ? '打开操作说明' : '收埋操作说明'; }
+$('keys').onclick = e => { e.stopPropagation(); toggleKeys(); };
 function toggleVoice() { VOICE = !VOICE; $('bVoice').lastChild.textContent = '读音：' + (VOICE ? '开' : '关'); post({ type: 'voice', on: VOICE }); }
 $('bHint').onclick = e => { e.stopPropagation(); if (state === 'play') hint(); };
 $('bAgain').onclick = e => { e.stopPropagation(); again(); };
@@ -344,18 +404,64 @@ $('bVoice').onclick = e => { e.stopPropagation(); toggleVoice(); };
 const renderer = () => G.renderer;
 function lockPointer() { try { const p = renderer().domElement.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (_) {} }
 addEventListener('mousedown', e => {
-  if (e.target.closest && e.target.closest('button')) return;
+  if (e.target.closest && e.target.closest('button, #keys')) return;
   if (state === 'title' && !EMBED) { startEnter(); return; }
+  if (TOUCH) return;   // 触屏由 touch 事件处理
   if (state === 'play') { if (!document.pointerLockElement) { lockPointer(); return; } interact(); }
   else if (state === 'find' && cine.t > 1.6 && cine.t < cine.D0) cine.t = cine.D0;
 });
-document.addEventListener('pointerlockchange', () => { $('paused').classList.toggle('on', state === 'play' && !document.pointerLockElement); });
+/* ---------- 触屏：左边 40% 摇杆（喺边度㩒落就喺边度做中心）、右边拖动转视角、轻点 = 拾取 ---------- */
+{
+  const joyEl = $('joy'), knob = $('joyKnob'), R0 = 46;
+  let joyId = null, jx = 0, jy = 0, lookId = null, lx = 0, ly = 0, tapT = 0, tapMove = 0;
+  const home = () => { joyEl.style.left = joyEl.style.top = joyEl.style.bottom = ''; joyEl.classList.remove('on', 'run'); knob.style.transform = ''; JOY.x = JOY.y = 0; JOY.run = false; };
+  const enableTouch = () => { if (!TOUCH) { TOUCH = true; document.body.classList.add('touch'); $('paused').classList.remove('on'); } };
+  const cv = renderer().domElement;
+  cv.addEventListener('touchstart', e => {
+    e.preventDefault(); enableTouch(); A.init();
+    if (state === 'title' && !EMBED) { startEnter(); return; }
+    if (state === 'find') { if (cine.t > 1.6 && cine.t < cine.D0) cine.t = cine.D0; return; }
+    if (state !== 'play') return;
+    for (const t of e.changedTouches) {
+      if (joyId === null && t.clientX < innerWidth * .4) {
+        joyId = t.identifier; jx = t.clientX; jy = t.clientY;
+        joyEl.style.left = (jx - 54) + 'px'; joyEl.style.top = (jy - 54) + 'px'; joyEl.style.bottom = 'auto'; joyEl.classList.add('on');
+      } else if (lookId === null) { lookId = t.identifier; lx = t.clientX; ly = t.clientY; tapT = performance.now(); tapMove = 0; }
+    }
+  }, { passive: false });
+  cv.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (t.identifier === joyId) {
+        let dx = t.clientX - jx, dy = t.clientY - jy; const d = Math.hypot(dx, dy);
+        if (d > R0) { dx *= R0 / d; dy *= R0 / d; }
+        knob.style.transform = `translate(${dx}px, ${dy}px)`;
+        JOY.x = dx / R0; JOY.y = dy / R0; JOY.run = d > R0 * 1.15; joyEl.classList.toggle('run', JOY.run);
+      } else if (t.identifier === lookId && state === 'play') {
+        const dx = t.clientX - lx, dy = t.clientY - ly; lx = t.clientX; ly = t.clientY; tapMove += Math.abs(dx) + Math.abs(dy);
+        // 横屏高度细，上下拖距离短，所以竖向灵敏度高啲（横屏手机拖成个屏高 ≈ 由望天到望地）
+        P.yaw -= dx * .006; P.pitch = Math.max(-1.35, Math.min(1.35, P.pitch - dy * Math.max(.0075, 1.4 / innerHeight)));
+      }
+    }
+  }, { passive: false });
+  const end = e => {
+    if (A.ctx && A.ctx.state === 'suspended') A.ctx.resume();   // iOS 要喺手指离开时先解锁声音
+    for (const t of e.changedTouches) {
+      if (t.identifier === joyId) { joyId = null; home(); }
+      else if (t.identifier === lookId) { lookId = null; if (state === 'play' && tapMove < 10 && performance.now() - tapT < 300) interact(); }
+    }
+  };
+  cv.addEventListener('touchend', end); cv.addEventListener('touchcancel', end);
+  $('actBtn').addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); if (state === 'play') interact(); else if (state === 'find' && cine.t > 1.6 && cine.t < cine.D0) cine.t = cine.D0; }, { passive: false });
+  $('actBtn').onclick = e => { e.stopPropagation(); if (state === 'play') interact(); };
+}
+document.addEventListener('pointerlockchange', () => { $('paused').classList.toggle('on', isPaused()); });
 $('sysGo').onclick = () => { $('sys').classList.remove('on'); window.focus(); startEnter(); };
 
 const titlePose = t => { const a = -.6 + t * .045; return { pos: new V3(Math.sin(a) * 25, 12.5 + Math.sin(t * .2) * .8, Math.cos(a) * 25), look: new V3(0, 2.5, -1) }; };
 let enterPath = null, titleT = SHOT === 'title' ? 3 : 0;
 function startEnter() {
-  A.init(); lockPointer();
+  A.init(); if (!TOUCH) lockPointer();
   state = 'enter'; st = 0;
   $('title').classList.remove('on');
   const a = EMBED ? PLAN : titlePose(titleT);
@@ -365,7 +471,7 @@ function startEnter() {
   if (EMBED) { A.whoosh && A.whoosh(); }
 }
 function beginFind(t) {
-  state = 'find'; hover = null; $('prompt').classList.remove('on'); $('cross').classList.remove('hot');
+  state = 'find'; hover = null; $('prompt').classList.remove('on'); $('cross').classList.remove('hot'); $('actBtn').classList.remove('hot');
   const from = playerPose();
   const c = { t0: t, t: 0, from, D0: 5.0, D1: 6.1 };
   if (t.kind === 'pick') {
@@ -397,7 +503,7 @@ const ray = new T.Raycaster();
 function blocked(from, to) {
   const dir = to.clone().sub(from), d = dir.length();
   ray.set(from, dir.normalize()); ray.far = d - .5; ray.camera = camera;
-  return ray.intersectObjects(scene.children, true).some(h => h.object.visible && !h.object.isSprite && !h.object.isPoints && !h.object.isLine && h.object !== G.sky);
+  return ray.intersectObjects(occluders(), false).some(h => shown(h.object));
 }
 function orbitPose(c, ang, lift) { const cc = c.c.clone().add(new V3(0, .25, 0)); return { pos: new V3(cc.x + Math.sin(ang) * c.r, cc.y + lift, cc.z + Math.cos(ang) * c.r), look: cc }; }
 function setCam(pos, look) { camera.position.copy(pos); camera.lookAt(look); }
@@ -490,12 +596,13 @@ function update(dt) {
     if (EMBED) { POST.paper = 1 - clamp01((st - .5) / 3.2); POST.bars = 0; }
     else POST.bars = 1 - clamp01((st - enterPath.D + 1.4) / 1.4);
     if (st >= enterPath.D) {
-      state = 'play'; st = 0; startTime = time; P.yaw = 0; P.pitch = 0; POST.paper = 0; planLook(false);
+      state = 'play'; st = 0; playT = 0; P.yaw = 0; P.pitch = 0; POST.paper = 0; planLook(false);
       $('hud').classList.add('on');
-      showTip('WASD 行 · Shift 快行 · 对准纸条上嘅嘢㩒 E · Q 睇提示', 7);
+      showTip(TOUCH ? '左下摇杆行路 · 右边画面拖动望上望落、左右转身 · 准星对准纸条上嘅嘢㩒「拾」' + (innerHeight > innerWidth ? ' · 打横部手机玩更好' : '')
+                    : 'WASD 前后左右行 · 移动鼠标望上望落、左右转身 · 对准纸条上嘅嘢㩒 E 拾取', 8);
     }
   } else if (state === 'play') {
-    const { bobX, bobY } = updatePlayer(dt);
+    const { bobX, bobY } = updatePlayer(isPaused() ? 0 : dt);
     const pose = playerPose();
     camera.position.copy(pose.pos).add(new V3(bobX, bobY, 0).applyQuaternion(pose.quat));
     camera.quaternion.copy(pose.quat);
@@ -504,7 +611,7 @@ function update(dt) {
     if (h !== hover && !(h && hover && h.distract && hover.distract && h.distract === hover.distract)) {
       if (hover && !hover.distract) { lastHover = hover; lastHoverT = G.time.value; }
       hover = h; if (h && !h.distract) A.tick();
-      $('cross').classList.toggle('hot', !!(h && !h.distract));
+      $('cross').classList.toggle('hot', !!(h && !h.distract)); $('actBtn').classList.toggle('hot', !!(h && !h.distract));
       $('prompt').classList.toggle('on', !!h);
       if (h) { $('prompt-name').textContent = h.distract ? h.distract.name : h.word; $('prompt').classList.toggle('dim', !!h.distract); }
     }
@@ -538,22 +645,25 @@ function update(dt) {
       POST.bars = 1 - k; camera.fov = 58 + 6 * k;
       if (c.t >= c.D1) {
         if (t.kind === 'pick') { t.obj.visible = false; G.renderer.shadowMap.needsUpdate = true; }
-        if (foundN >= NEED.length) startEnd(); else { state = 'play'; if (foundN === 1 && !EMBED) showTip('好眼力！留意闪光，亦可以㩒 Q 睇提示', 5); }
+        if (foundN >= NEED.length) startEnd(); else { state = 'play'; if (foundN === 1 && TOUCH) toggleKeys(true); if (foundN === 1 && !EMBED) showTip((TOUCH ? '好眼力！留意闪光，亦可以㩒「提示」' : '好眼力！留意闪光，亦可以㩒 Q 睇提示'), 5); }
       }
     }
   } else if (state === 'end') {
     const k = ease(clamp01(st / 7)), a = st * .05 - .2, o = new V3(Math.sin(a) * 22, 4 + 10 * k, 6 + Math.cos(a) * 22);
     camera.position.lerpVectors(endFrom.pos, o, k);
     camera.quaternion.slerpQuaternions(endFrom.quat, lookQuat(camera.position, new V3(0, 2, -2)), Math.min(1, k * 1.4));
-    POST.bars = Math.min(1, st / 1.5);
+    POST.bars = Math.max(0, POST.bars - dt * 2);              // 收尾唔要电影黑边（平板 / 手机上会黑咗一大截）
     if (EMBED) POST.paper = clamp01((st - 3.2) / 2.5);       // 慢慢变返张图纸
   }
-  // 倒计时
+  // 倒计时（暂停时唔行）
+  if ((state === 'play' || state === 'find') && !isPaused()) playT += dt;
+  const pz = isPaused();
+  if (pz !== wasPaused) { wasPaused = pz; $('paused').classList.toggle('on', pz); post({ type: 'pause', on: pz }); }   // 只喺变化时先改 DOM   // 第一幕嘅总用时都要扣返暂停
   if (SECONDS && (state === 'play' || state === 'find')) {
-    timeLeft = Math.max(0, SECONDS - (time - startTime));
+    timeLeft = Math.max(0, SECONDS - playT);
     const tm = $('timer'); tm.textContent = fmt(timeLeft); tm.classList.toggle('warn', timeLeft < 30);
     if (timeLeft <= 0 && state === 'play') timeUp();
-  } else if (!SECONDS && (state === 'play' || state === 'find')) $('timer').textContent = fmt(time - startTime);   // 单独玩：显示用时
+  } else if (!SECONDS && (state === 'play' || state === 'find')) $('timer').textContent = fmt(playT);   // 单独玩：显示用时
   // 提示箭头
   const ha = $('hintArrow');
   if (hintT > 0 && hintIt && hintIt.center && state === 'play') {
@@ -575,7 +685,7 @@ function startEnd() {
   state = 'end'; st = 0; endFrom = { pos: camera.position.clone(), quat: camera.quaternion.clone() };
   document.exitPointerLock && document.exitPointerLock();
   $('hud').classList.remove('on');
-  $('end-time').textContent = EMBED ? '张纸条上嘅嘢全部搵齐，张图纸放返你出嚟喇' : `用时 ${fmt(G.time.value - startTime)}`;
+  $('end-time').textContent = EMBED ? '张纸条上嘅嘢全部搵齐，张图纸放返你出嚟喇' : `用时 ${fmt(playT)}`;
   setTimeout(() => $('end').classList.add('on'), 2200);
   setTimeout(() => A.chime(), 600);
   if (EMBED) setTimeout(() => post({ type: 'done' }), 6000);
@@ -584,6 +694,7 @@ function timeUp() {
   state = 'timeup'; document.exitPointerLock && document.exitPointerLock();
   const left = targets.filter(t => t.active && !t.found).map(t => t.word);
   post({ type: 'timeup', left });
+  $('scrolls').hidden = true;
   if (!EMBED) { $('end-title').textContent = '时间到'; $('end-time').textContent = `仲有 ${left.length} 样未搵到：${left.join('、')}`; $('end').classList.add('on'); }
 }
 
@@ -681,7 +792,7 @@ $('loading').classList.add('off');
 if (SHOT) { document.body.classList.add('shot'); $('loading').style.display = 'none'; }
 if (!SHOT) {
   if (EMBED) {
-    $('sys-text').innerHTML = `要喺 <b>${fmt(SECONDS)}</b> 之内搵齐纸条上仲未搵到嘅 <b>${NEED.length}</b> 样嘢，先可以离开呢张图纸。<br>对准纸条上嘅嘢㩒 <b>E</b>；唔识揾就㩒 <b>Q</b>。`;
+    $('sys-text').innerHTML = `要喺 <b>${fmt(SECONDS)}</b> 之内搵齐纸条上仲未搵到嘅 <b>${NEED.length}</b> 样嘢，先可以离开呢张图纸。<br>${TOUCH ? '对准纸条上嘅嘢㩒 <b>「拾」</b>；唔识揾就㩒 <b>提示</b>。' : '对准纸条上嘅嘢㩒 <b>E</b>；唔识揾就㩒 <b>Q</b>。'}`;
     $('sys').classList.add('on'); planLook();
   } else { $('title').classList.add('on'); $('timer').textContent = '00:00'; }
 }
