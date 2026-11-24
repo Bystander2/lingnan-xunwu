@@ -490,6 +490,8 @@ const DISTRACT = {
   '鸡蛋花':'鸡蛋花好香……但系唔喺纸条度。',
 };
 const ROUND_SIZE = 10;
+// 第一幕「提示」唔指嘅词：龙牙蕉喺图纸上只系一丛叶，圈住都认唔出係蕉（第二幕照常提示）
+const ACT1_NO_HINT = new Set(['龙牙蕉']);
 const WORLD_SECONDS = 300;
 // 大件嘢：头几样撕得郁，撕咗三样之后再撕佢哋就会撕唔落、被扯入图纸
 const BIG = new Set(window.GARDEN_BIG);
@@ -660,6 +662,8 @@ function setPaused(on){
 const elapsedSec = () => Math.floor((Date.now() - t0 - pausedMs - (pauseAt ? Date.now() - pauseAt : 0)) / 1000);
 let busy = false, inWorld = false, worldEntered = false;
 const hitOf = w => document.querySelector(`.hit[data-w="${w}"]`);
+// 纸条上仲未撕嘅大件。最后一样大件第一幕永远撕唔落（点佢就扯入图纸），保证每铺都会入第二幕
+const bigLeft = () => round.filter(w => BIG.has(w) && !found.has(w) && !tearing.has(w));
 const boxOf = el => ['x','y','width','height'].map(k => +el.getAttribute(k));
 
 function shuffle(a){ for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
@@ -682,14 +686,14 @@ function newRound(){
   clearTimeout(nudgeTm); nudgeTm = setTimeout(nudge, NUDGE_MS);
 }
 
-/* 新手引导：开局 10 秒都未撕到任何嘢 → 圈住纸条上面最易搵嗰样（细件、面积最大），撕咗第一样就收 */
+/* 新手引导：开局 10 秒都未撕到任何嘢 → 圈住纸条上面一样喺图纸上一眼认得出嘅嘢，撕咗第一样就收。
+   NUDGE_PICK 只放图上最显眼嘅，按先后揀；每铺 12 抽 10，名单 6 样起码有 4 样喺纸条度 */
+const NUDGE_PICK = ['油纸遮', '饮早茶', '大葵扇', '瓦公仔', '一只屐', '担凳仔'];
 const NUDGE_MS = 10000;
 let nudgeTm = null;
 function nudge(){
   if (inWorld || busy || won || found.size || tearing.size || !$('#win').hidden) return;
-  const cand = round.filter(w => !BIG.has(w) && hitOf(w));
-  const area = w => { const [,,bw,bh] = boxOf(hitOf(w)); return bw*bh; };
-  const w = cand.sort((a,b) => area(b) - area(a))[0]; if (!w) return;
+  const w = NUDGE_PICK.find(w => round.includes(w) && hitOf(w)); if (!w) return;
   const [x,y,bw,bh] = boxOf(hitOf(w));
   svgEl('ellipse', {cx:x+bw/2, cy:y+bh/2, rx:bw/2+18, ry:bh/2+16, fill:'none', stroke:'#c0362a', 'stroke-width':5, 'stroke-dasharray':'14 8', class:'nudge', filter:'url(#fiber)'}, $('#fx'));
   playPen();
@@ -785,7 +789,9 @@ function tear(w, hit){
 
   // 呢块撕走之后，纸条上仲有边样大部分都喺洞入面？—— 顺手一齐撕埋
   holePolys.push(pts); holeClip(pts);
-  const along = round.filter(o => o !== w && !found.has(o) && !tearing.has(o) && hitOf(o) && covered(hitOf(o)) >= .6);
+  let along = round.filter(o => o !== w && !found.has(o) && !tearing.has(o) && hitOf(o) && covered(hitOf(o)) >= .6);
+  // 顺手撕都唔可以撕走最后一样大件（要留佢扯人入图纸）
+  if (bigLeft().length - along.filter(o => BIG.has(o)).length < 1) { const keep = along.find(o => BIG.has(o)); along = along.filter(o => o !== keep); }
   along.forEach(o => tearing.add(o));
 
   playTear();
@@ -891,10 +897,15 @@ function onHit(e){
   if (!started || busy) return;
   const hit = e.target.closest('.hit'); if (!hit) return;
   audio();
-  { const p = svgPoint(e); if (inHole(p.x, p.y)) return wrong('呢度已经撕咗喇，剩低个窿～'); }
+  { const p = svgPoint(e); if (inHole(p.x, p.y)){
+    // 最后一样大件可能俾顺手撕嘅洞盖住：㩒中佢嘅范围照样扯入图纸，唔好卡死喺第一幕
+    const lb = bigLeft().map(hitOf).find(h => { const [x,y,w,h2] = boxOf(h); return p.x >= x && p.x <= x+w && p.y >= y && p.y <= y+h2; });
+    return lb ? stuckTear(lb, e) : wrong('呢度已经撕咗喇，剩低个窿～');
+  } }
   const w = hit.dataset.w, d = hit.dataset.d, big = hit.dataset.big;
   // 头几样撕得郁；撕咗三样之后，再撕大件嘢就撕唔落、成个人被扯入图
-  if (found.size >= 3 && (big || (w && BIG.has(w) && round.includes(w) && !found.has(w)))) return stuckTear(hit, e);
+  const bigW = w && BIG.has(w) && round.includes(w) && !found.has(w) && !tearing.has(w);
+  if ((found.size >= 3 && (big || bigW)) || (bigW && bigLeft().length <= 1)) return stuckTear(hit, e);
   if (big) return wrong(`「${big}」太大件喇，撕唔郁——撕啲细件嘅先啦。`);
   if (w){
     if (found.has(w) || tearing.has(w)) return;
@@ -972,7 +983,7 @@ $('#hintBtn').onclick = () => {
     toast(`「${w}」：${HINT3D[w]}`, 2600); playPen();
     return;
   }
-  const left = round.filter(w => !found.has(w) && !tearing.has(w));
+  const left = round.filter(w => !found.has(w) && !tearing.has(w) && !ACT1_NO_HINT.has(w));
   if (!left.length) return;
   hints++;
   const w = left[Math.floor(Math.random()*left.length)];
