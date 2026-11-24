@@ -649,11 +649,17 @@ function update(dt) {
       }
     }
   } else if (state === 'end') {
-    const k = ease(clamp01(st / 7)), a = st * .05 - .2, o = new V3(Math.sin(a) * 22, 4 + 10 * k, 6 + Math.cos(a) * 22);
-    camera.position.lerpVectors(endFrom.pos, o, k);
-    camera.quaternion.slerpQuaternions(endFrom.quat, lookQuat(camera.position, new V3(0, 2, -2)), Math.min(1, k * 1.4));
+    const E = endPath;
+    if (st < E.DA) {                                          // ①摆正：视线摆返平视，转向北面（同图纸视角同一个方向）
+      camera.position.copy(E.p0); camera.quaternion.slerpQuaternions(E.q0, E.qNorth, ease(st / E.DA));
+    } else {                                                  // ②由地面斜斜飞出去，停喺图纸视角，变返纸
+      const u = st - E.DA, k = ease(clamp01(u / END_D));
+      camera.position.copy(E.path.getPoint(k)); camera.quaternion.slerpQuaternions(E.qNorth, E.qPlan, k);
+      camera.fov = E.fov0 + (PLAN.fov - E.fov0) * k;
+      if (EMBED) POST.paper = clamp01((u - END_D + 2.6) / 2.4);   // 最后两秒半慢慢变返张图纸
+      if (EMBED && !E.sent && u >= END_D + .3) { E.sent = true; post({ type: 'done' }); }
+    }
     POST.bars = Math.max(0, POST.bars - dt * 2);              // 收尾唔要电影黑边（平板 / 手机上会黑咗一大截）
-    if (EMBED) POST.paper = clamp01((st - 3.2) / 2.5);       // 慢慢变返张图纸
   }
   // 倒计时（暂停时唔行）
   if ((state === 'play' || state === 'find') && !isPaused()) playT += dt;
@@ -680,15 +686,36 @@ function update(dt) {
   camera.updateMatrixWorld();
   A.listen(camera);
 }
-let endFrom = null;
+/* 收尾镜头：①摆正：视线摆平、转向北面 ②由企嘅位置斜斜向上飞出去，停喺第一幕图纸视角 PLAN，同时变返纸画风。
+   用二次贝塞尔：优先直斜线；会穿榕树树冠 / 屋顶就将控制点抬高、提前（喺树冠底就压低），揾条最接近直线又唔穿嘢嘅弧线。 */
+let endPath = null;
+const END_D = 5;
+const BANYAN_C = new V3(5, 7.6, 3.5);                        // 榕树树冠中心（world.js：叶壳 7.2×2.4×7.2，加气根叶尖）
+const inCanopy = v => ((v.x - BANYAN_C.x) / 8.5) ** 2 + ((v.y - BANYAN_C.y) / 3.4) ** 2 + ((v.z - BANYAN_C.z) / 8.5) ** 2 < 1;
+// 屋顶係单面网格，两个方向都射一次先撞得到
+const crosses = (a, b) => a.distanceTo(b) > .6 && (blocked(a, b) || blocked(b, a));
+function exitPath(p0) {
+  const end = PLAN.pos.clone(), tries = [];
+  for (const h of [0, 4, 8, 12, 16]) for (const s of [.5, .35, .2, .08]) { const c = p0.clone().lerp(end, s); c.y += h; tries.push(c); }
+  for (const s of [.5, .65, .8]) tries.push(p0.clone().lerp(end, s).setY(p0.y));   // 企喺树冠底：先低飞出树冠再斜上
+  for (const c of tries) {
+    const path = new T.QuadraticBezierCurve3(p0.clone(), c, end), pts = path.getPoints(36);
+    if (!pts.some(inCanopy) && !pts.some((v, i) => i && crosses(pts[i - 1], v))) return path;
+  }
+  return new T.QuadraticBezierCurve3(p0.clone(), p0.clone().lerp(end, .5), end);
+}
 function startEnd() {
-  state = 'end'; st = 0; endFrom = { pos: camera.position.clone(), quat: camera.quaternion.clone() };
+  state = 'end'; st = 0;
   document.exitPointerLock && document.exitPointerLock();
   $('hud').classList.remove('on');
+  const p0 = camera.position.clone();
+  endPath = {
+    p0, q0: camera.quaternion.clone(), qNorth: lookQuat(p0, p0.clone().add(new V3(0, 0, -10))), qPlan: lookQuat(PLAN.pos, PLAN.look),
+    path: exitPath(p0), DA: 1.2, fov0: camera.fov, sent: false,
+  };
   $('end-time').textContent = EMBED ? '张纸条上嘅嘢全部搵齐，张图纸放返你出嚟喇' : `用时 ${fmt(playT)}`;
   setTimeout(() => $('end').classList.add('on'), 2200);
   setTimeout(() => A.chime(), 600);
-  if (EMBED) setTimeout(() => post({ type: 'done' }), 6000);
 }
 function timeUp() {
   state = 'timeup'; document.exitPointerLock && document.exitPointerLock();
@@ -778,6 +805,7 @@ if (SHOT === 'enter') { startEnter(); for (let k = 0; k < (+(G.Q.get('t') || 3))
 if (G.Q.has('sim')) for (let k = 0; k < +G.Q.get('sim') * 60; k++) update(1 / 60);
 if (SHOT === 'pick') {
   const t = targets.find(x => x.word === G.Q.get('w')) || targets[0]; t.active = true;
+  scene.updateMatrixWorld();   // 未 render 过，raycast（收尾揾露天位）要用到世界矩阵
   update(1 / 60); beginFind(t); for (let k = 0; k < (+(G.Q.get('t') || 2.5)) * 60; k++) update(1 / 60);
 }
 if (SHOT === 'plan') { update(1 / 60); G.render(); planHits(); }
