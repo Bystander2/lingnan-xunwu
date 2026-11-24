@@ -1,4 +1,4 @@
-# Lingnan Xunwu · A Cantonese Garden Scavenger Hunt
+# Lost in Lingnan · A Cantonese Garden Scavenger Hunt
 
 A browser-only Cantonese vocabulary game. Find the words on your shopping slip in a hand-drawn plan of a Lingnan (southern Chinese) garden, tear them out of the paper, and hear them spoken in Cantonese. Halfway through, the paper refuses to tear — and pulls you into the drawing, where you finish the hunt in first person inside a 3D garden.
 

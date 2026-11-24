@@ -249,11 +249,11 @@ body.world-on .w-cap{top:86px}
 .scrolls li.now{border-color:#b33a2b; color:#b33a2b}
 .scrolls li.lock{border-style:dashed; opacity:.65}
 .win-btns{display:flex; gap:12px; justify-content:center; flex-wrap:wrap}
-/* 「搞掂晒」盖章旁边嘅催更掣 */
+/* 「搞掂晒」盖章旁边嘅「好玩」掣：俾玩家话我哋知钟意呢个游戏 */
 .win-head{display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:0 14px}
-.win-head .stamp, #winUrge{white-space:nowrap}
-#winUrge{transform:rotate(4deg); color:#b33a2b; border-color:#b33a2b}
-#winUrge:disabled{opacity:.6; cursor:default}
+.win-head .stamp, #winLike{white-space:nowrap}
+#winLike{transform:rotate(4deg); color:#b33a2b; border-color:#b33a2b}
+#winLike:disabled{opacity:.6; cursor:default}
 /* 温返啲词：今铺搵到嘅词，逐个再听 */
 #review .card{width:min(520px,92vw)}
 #review ul{list-style:none; margin:0 0 16px; padding:0; max-height:min(56vh,460px); overflow:auto; text-align:left}
@@ -408,7 +408,7 @@ body.world-on .w-cap{top:86px}
   <div class="card">
     <div class="win-head">
       <div class="stamp">搞掂晒</div>
-      <button id="winUrge" title="想快啲玩到下一卷？㩒一下话俾我哋知">📣 催更</button>
+      <button id="winLike" title="钟意呢个游戏？㩒一下话俾我哋知">❤ 好玩！</button>
     </div>
     <p class="hand" id="winText"></p>
     <div class="scrolls">
@@ -441,7 +441,7 @@ body.world-on .w-cap{top:86px}
 
 <script src="garden/words.js"></script>
 <script>
-/* Umami 统计：game-start / idle-nudge（10 秒未撕到嘢嘅新手引导）/ word-found / enter-world / world-timeup / win / urge-update（通关后催更，每个浏览器只报一次）/ heartbeat；
+/* Umami 统计：game-start / idle-nudge（10 秒未撕到嘢嘅新手引导）/ word-found / enter-world / world-timeup / win / like（通关后㩒「好玩」，每个浏览器只报一次）/ heartbeat；
    温返啲词：review-open（打开词表）/ review-play（单独听某个词）/ review-all（全部顺住读）/ review-back（返回）。
    script.js 未载入（网慢）时先排队，载入后按顺序补发；30 秒都载唔到（被拦截）就放弃。
    心跳每 30 秒一次（只喺页面睇得见时），令停留时长计得准，玩 30 分钟后停 */
@@ -865,7 +865,7 @@ function winGame(){
     $('#flash').classList.add('on'); setTimeout(() => $('#flash').classList.remove('on'), 500);
   }
   playWin();
-  const u = $('#winUrge'); u.disabled = false; u.textContent = '📣 催更';
+  const u = $('#winLike'); u.disabled = false; u.textContent = '❤ 好玩！';
   $('#winText').innerHTML = `${round.length} 样嘢全部撕齐！<br>用咗 ${$('#time').textContent}${hints ? `，睇咗 ${hints} 次提示` : '，一次提示都冇睇，好叻！'}`;
   $('#win').hidden = false;
 }
@@ -984,15 +984,15 @@ $('#hintBtn').onclick = () => {
   toast(`红笔圈住咗「${w}」嘅位置`, 1800);
 };
 $('#againBtn').onclick = newRound;
-/* 催更：统计有几多人等紧下一卷。同一个浏览器只报一次埋点（localStorage 记住），之后再㩒照样有回应但唔再报；
+/* 「好玩」：统计有几多玩家钟意呢个游戏。同一个浏览器只报一次埋点（localStorage 记住），之后再㩒照样有回应但唔再报；
    前端攞唔到 IP，按 IP 去重睇 Umami 后台呢个事件嘅访客数（Visitors） */
-const URGE_KEY = 'lnxw-urged';
-$('#winUrge').onclick = () => {
-  const u = $('#winUrge'); if (u.disabled) return;
-  u.disabled = true; u.textContent = '✓ 收到！加紧画';   // 提示条喺遮罩下面睇唔到，直接喺掣上回应
+const LIKE_KEY = 'lnxw-liked';
+$('#winLike').onclick = () => {
+  const u = $('#winLike'); if (u.disabled) return;
+  u.disabled = true; u.textContent = '❤ 多谢支持！';   // 提示条喺遮罩下面睇唔到，直接喺掣上回应
   let first = true;
-  try { first = !localStorage.getItem(URGE_KEY); localStorage.setItem(URGE_KEY, '1'); } catch (e) {}   // 无痕 / 禁用存储：照报
-  if (first) track('urge-update', { round: roundNo });
+  try { first = !localStorage.getItem(LIKE_KEY); localStorage.setItem(LIKE_KEY, '1'); } catch (e) {}   // 无痕 / 禁用存储：照报
+  if (first) track('like', { round: roundNo, seconds: elapsedSec(), hints });
   playPen();
 };
 $('#winAgain').onclick = newRound;
